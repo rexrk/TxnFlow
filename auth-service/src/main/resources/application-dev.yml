@@ -10,13 +10,14 @@ server:
 keycloak:
   server-url: http://localhost:8080
   realm: txnflow
+  client-id: txnflow-auth-service
+  client-secret: bNzXEcPNNToRvmavPSjxzthpqIwoELU4
 
   admin-realm: master
   admin-username: txn_admin
   admin-password: txn_strong
   admin-client-id: admin-cli
-  client-secret: bNzXEcPNNToRvmavPSjxzthpqIwoELU4
 
 logging:
   level:
-    org.springframework.security: DEBUG
+    org.springframework.security: debug

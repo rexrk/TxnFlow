@@ -7,14 +7,18 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import txnflow.auth_service.dto.request.LoginRequest;
+import txnflow.auth_service.dto.request.RefreshTokenRequest;
 import txnflow.auth_service.dto.request.RegisterRequest;
-import txnflow.auth_service.service.KeycloakUserService;
+import txnflow.auth_service.dto.response.ApiResponse;
+import txnflow.auth_service.dto.response.TokenResponse;
+import txnflow.auth_service.service.KeycloakAuthService;
 
 @RestController
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final KeycloakUserService keycloakUserService;
+    private final KeycloakAuthService keycloakAuthService;
 
 
     @GetMapping("/hello")
@@ -23,24 +27,22 @@ public class AuthController {
     }
 
 
-//    POST /api/v1/auth/register
-
-
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
-        keycloakUserService.register(request);
+    public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest request) {
+        keycloakAuthService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body("User registered successfully");
+                .body(new ApiResponse("User registered successfully"));
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest request) {
+        return ResponseEntity.ok(keycloakAuthService.login(request));
+    }
 
-
-//    POST /api/v1/auth/login
-
-
-
-//    POST /api/v1/auth/refresh
-
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refresh(@RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(keycloakAuthService.refresh(request));
+    }
 
 
 //    POST /api/v1/auth/logout
