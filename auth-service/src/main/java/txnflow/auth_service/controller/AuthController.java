@@ -13,13 +13,13 @@ import txnflow.auth_service.dto.request.RefreshTokenRequest;
 import txnflow.auth_service.dto.request.RegisterRequest;
 import txnflow.auth_service.dto.response.ApiResponse;
 import txnflow.auth_service.dto.response.TokenResponse;
-import txnflow.auth_service.service.KeycloakAuthService;
+import txnflow.auth_service.service.AuthService;
 
 @RestController
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final KeycloakAuthService keycloakAuthService;
+    private final AuthService authService;
 
 
     @GetMapping("/hello")
@@ -30,24 +30,24 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest request) {
-        keycloakAuthService.register(request);
+        authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse("User registered successfully"));
     }
 
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest request) {
-        return ResponseEntity.ok(keycloakAuthService.login(request));
+        return ResponseEntity.ok(authService.login(request));
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<TokenResponse> refresh(@RequestBody RefreshTokenRequest request) {
-        return ResponseEntity.ok(keycloakAuthService.refresh(request));
+        return ResponseEntity.ok(authService.refresh(request));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse> logout( @RequestBody LogoutRequest request) {
-        keycloakAuthService.logout(request);
+        authService.logout(request);
         return ResponseEntity.ok(new ApiResponse("Logged out successfully"));
     }
 

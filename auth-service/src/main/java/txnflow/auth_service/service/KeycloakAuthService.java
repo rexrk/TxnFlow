@@ -28,12 +28,13 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class KeycloakAuthService {
+public class KeycloakAuthService implements AuthService {
 
     private final Keycloak keycloak;
     private final KeycloakProperties props;
     private final RestClient restClient;
 
+    @Override
     public void register(RegisterRequest request) {
         log.info("User registration request {}", request.email());
         UserRepresentation user = new UserRepresentation();
@@ -90,6 +91,7 @@ public class KeycloakAuthService {
         return new String[]{firstName, lastName};
     }
 
+    @Override
     public TokenResponse login(LoginRequest request) {
         String tokenUrl = props.serverUrl()
                 + "/realms/"
@@ -117,6 +119,7 @@ public class KeycloakAuthService {
         }
     }
 
+    @Override
     public TokenResponse refresh(RefreshTokenRequest request) {
         String tokenUrl = props.serverUrl()
                 + "/realms/"
@@ -143,6 +146,7 @@ public class KeycloakAuthService {
         }
     }
 
+    @Override
     public void logout(LogoutRequest request) {
 
         String logoutUrl = props.serverUrl()
