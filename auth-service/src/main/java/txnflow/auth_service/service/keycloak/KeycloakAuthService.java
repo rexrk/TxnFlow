@@ -1,4 +1,4 @@
-package txnflow.auth_service.service;
+package txnflow.auth_service.service.keycloak;
 
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +22,7 @@ import txnflow.auth_service.exception.InvalidCredentialsException;
 import txnflow.auth_service.exception.InvalidRefreshTokenException;
 import txnflow.auth_service.exception.UserAlreadyExistsException;
 import txnflow.auth_service.properties.KeycloakProperties;
+import txnflow.auth_service.service.AuthService;
 
 import java.util.List;
 
