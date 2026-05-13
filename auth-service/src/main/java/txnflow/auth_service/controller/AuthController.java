@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import txnflow.auth_service.dto.request.LoginRequest;
+import txnflow.auth_service.dto.request.LogoutRequest;
 import txnflow.auth_service.dto.request.RefreshTokenRequest;
 import txnflow.auth_service.dto.request.RegisterRequest;
 import txnflow.auth_service.dto.response.ApiResponse;
@@ -44,14 +45,14 @@ public class AuthController {
         return ResponseEntity.ok(keycloakAuthService.refresh(request));
     }
 
-
-//    POST /api/v1/auth/logout
-
-
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse> logout( @RequestBody LogoutRequest request) {
+        keycloakAuthService.logout(request);
+        return ResponseEntity.ok(new ApiResponse("Logged out successfully"));
+    }
 
 
 //    GET  /api/v1/auth/me
-
 
 
 }

@@ -11,11 +11,15 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import txnflow.auth_service.dto.request.LoginRequest;
+import txnflow.auth_service.dto.request.LogoutRequest;
 import txnflow.auth_service.dto.request.RefreshTokenRequest;
 import txnflow.auth_service.dto.request.RegisterRequest;
 import txnflow.auth_service.dto.response.TokenResponse;
+import txnflow.auth_service.exception.InvalidCredentialsException;
+import txnflow.auth_service.exception.InvalidRefreshTokenException;
 import txnflow.auth_service.exception.UserAlreadyExistsException;
 import txnflow.auth_service.properties.KeycloakProperties;
 
@@ -100,12 +104,17 @@ public class KeycloakAuthService {
         form.add(OAuth2Constants.PASSWORD, request.password());
         form.add(OAuth2Constants.SCOPE, "openid profile email");
 
-        return restClient.post()
-                .uri(tokenUrl)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(form)
-                .retrieve()
-                .body(TokenResponse.class);
+        try {
+            return restClient.post()
+                    .uri(tokenUrl)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .body(TokenResponse.class);
+
+        } catch (HttpClientErrorException.BadRequest ex) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
     }
 
     public TokenResponse refresh(RefreshTokenRequest request) {
@@ -121,11 +130,37 @@ public class KeycloakAuthService {
         form.add(OAuth2Constants.CLIENT_SECRET, props.clientSecret());
         form.add(OAuth2Constants.REFRESH_TOKEN, request.refreshToken());
 
-        return restClient.post()
-                .uri(tokenUrl)
+        try {
+            return restClient.post()
+                    .uri(tokenUrl)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .body(TokenResponse.class);
+
+        } catch (HttpClientErrorException.BadRequest ex) {
+            throw new InvalidRefreshTokenException("Invalid or expired refresh token");
+        }
+    }
+
+    public void logout(LogoutRequest request) {
+
+        String logoutUrl = props.serverUrl()
+                + "/realms/"
+                + props.realm()
+                + "/protocol/openid-connect/logout";
+
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+
+        form.add(OAuth2Constants.CLIENT_ID, props.clientId());
+        form.add(OAuth2Constants.CLIENT_SECRET, props.clientSecret());
+        form.add(OAuth2Constants.REFRESH_TOKEN, request.refreshToken());
+
+        restClient.post()
+                .uri(logoutUrl)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(form)
                 .retrieve()
-                .body(TokenResponse.class);
+                .toBodilessEntity();
     }
 }
