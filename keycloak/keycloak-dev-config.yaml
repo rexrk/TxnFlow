@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: keycloak-dev-config
-data:
-  KC_DB_URL_HOST: "${KC_DB_URL_HOST}"          # Hostname of your DB
-  KC_DB_URL_PORT: "${KC_DB_URL_PORT}"          # Port number of your DB
-  KC_DB_URL_DATABASE: "${KC_DB_URL_DATABASE}"  # Database name
