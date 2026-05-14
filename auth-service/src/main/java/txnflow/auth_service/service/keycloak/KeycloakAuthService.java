@@ -8,6 +8,7 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -17,6 +18,7 @@ import txnflow.auth_service.dto.request.LoginRequest;
 import txnflow.auth_service.dto.request.LogoutRequest;
 import txnflow.auth_service.dto.request.RefreshTokenRequest;
 import txnflow.auth_service.dto.request.RegisterRequest;
+import txnflow.auth_service.dto.response.AuthUserResponse;
 import txnflow.auth_service.dto.response.TokenResponse;
 import txnflow.auth_service.exception.InvalidCredentialsException;
 import txnflow.auth_service.exception.InvalidRefreshTokenException;
@@ -167,5 +169,14 @@ public class KeycloakAuthService implements AuthService {
                 .body(form)
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    @Override
+    public AuthUserResponse me(Jwt jwt) {
+        return new AuthUserResponse(
+                jwt.getSubject(),
+                jwt.getClaimAsString("email"),
+                jwt.getClaimAsString("name")
+        );
     }
 }

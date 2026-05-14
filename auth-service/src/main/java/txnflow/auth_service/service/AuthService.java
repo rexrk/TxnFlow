@@ -1,9 +1,11 @@
 package txnflow.auth_service.service;
 
+import org.springframework.security.oauth2.jwt.Jwt;
 import txnflow.auth_service.dto.request.LoginRequest;
 import txnflow.auth_service.dto.request.LogoutRequest;
 import txnflow.auth_service.dto.request.RefreshTokenRequest;
 import txnflow.auth_service.dto.request.RegisterRequest;
+import txnflow.auth_service.dto.response.AuthUserResponse;
 import txnflow.auth_service.dto.response.TokenResponse;
 
 public interface AuthService {
@@ -11,5 +13,5 @@ public interface AuthService {
     TokenResponse login(LoginRequest request);
     TokenResponse refresh(RefreshTokenRequest request);
     void logout(LogoutRequest request);
-
+    AuthUserResponse me(Jwt jwt);
 }
