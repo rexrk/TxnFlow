@@ -55,7 +55,6 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse("Logged out successfully"));
     }
 
-
     @GetMapping("/me")
     public ResponseEntity<AuthUserResponse> me(
             @AuthenticationPrincipal Jwt jwt

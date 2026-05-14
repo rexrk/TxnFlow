@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -14,6 +15,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import txnflow.auth_service.RoleConstants;
 import txnflow.auth_service.dto.request.LoginRequest;
 import txnflow.auth_service.dto.request.LogoutRequest;
 import txnflow.auth_service.dto.request.RefreshTokenRequest;
@@ -76,7 +78,26 @@ public class KeycloakAuthService implements AuthService {
             throw new RuntimeException("Failed to create user. Status: " + status);
         }
 
+        String userId = response.getLocation()
+                .getPath()
+                .replaceAll(".*/([^/]+)$", "$1");
+
         response.close();
+
+        RoleRepresentation userRole = keycloak
+                .realm(props.realm())
+                .roles()
+                .get(RoleConstants.USER)
+                .toRepresentation();
+
+        keycloak
+                .realm(props.realm())
+                .users()
+                .get(userId)
+                .roles()
+                .realmLevel()
+                .add(List.of(userRole));
+
     }
 
     private String[] splitName(String name) {
