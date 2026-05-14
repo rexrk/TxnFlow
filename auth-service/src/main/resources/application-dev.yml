@@ -1,11 +1,23 @@
 spring:
   application:
     name: auth-service
+
   security:
     oauth2:
-          resourceserver:
-            jwt:
-              issuer-uri: ${KC_BASE_URL}/realms/txnflow
+      resourceserver:
+        jwt:
+          issuer-uri: ${KC_BASE_URL}/realms/txnflow
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/auth_db
+    username: txnflow
+    password: txnflow_password
+    hikari:
+      connection-timeout: 3000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
 
 server:
   port: 8082
