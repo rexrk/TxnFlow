@@ -15,7 +15,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
-import txnflow.auth_service.RoleConstants;
+import txnflow.auth_service.constant.RoleConstants;
 import txnflow.auth_service.dto.request.LoginRequest;
 import txnflow.auth_service.dto.request.LogoutRequest;
 import txnflow.auth_service.dto.request.RefreshTokenRequest;
