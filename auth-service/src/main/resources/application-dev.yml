@@ -1,6 +1,26 @@
 spring:
   application:
     name: auth-service
+  web:
+    resources:
+      add-mappings: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KC_BASE_URL}/realms/txnflow
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/auth_db
+    username: txnflow
+    password: txnflow_password
+    hikari:
+      connection-timeout: 3000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
 
 server:
   port: 8082
@@ -8,15 +28,15 @@ server:
     context-path: /api/v1/auth
 
 keycloak:
-  server-url: http://localhost:8080
-  realm: txnflow
-  client-id: txnflow-auth-service
-  client-secret: bNzXEcPNNToRvmavPSjxzthpqIwoELU4
+  server-url: ${KC_BASE_URL}
+  realm: ${KC_REALM}
+  client-id: ${KC_CLIENT_ID}
+  client-secret: ${KC_CLIENT_SECRET}
 
-  admin-realm: master
-  admin-username: txn_admin
-  admin-password: txn_strong
-  admin-client-id: admin-cli
+  admin-realm: ${KC_ADMIN_REALM}
+  admin-username: ${KC_ADMIN_USERNAME}
+  admin-password: ${KC_ADMIN_PASSWORD}
+  admin-client-id: ${KC_ADMIN_CLIENT_ID}
 
 logging:
   level:

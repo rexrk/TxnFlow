@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,6 +15,7 @@ import txnflow.auth_service.dto.request.LogoutRequest;
 import txnflow.auth_service.dto.request.RefreshTokenRequest;
 import txnflow.auth_service.dto.request.RegisterRequest;
 import txnflow.auth_service.dto.response.ApiResponse;
+import txnflow.auth_service.dto.response.AuthUserResponse;
 import txnflow.auth_service.dto.response.TokenResponse;
 import txnflow.auth_service.service.AuthService;
 
@@ -21,7 +24,6 @@ import txnflow.auth_service.service.AuthService;
 public class AuthController {
 
     private final AuthService authService;
-
 
     @GetMapping("/hello")
     public String hello() {
@@ -52,8 +54,12 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse("Logged out successfully"));
     }
 
-
-//    GET  /api/v1/auth/me
+    @GetMapping("/me")
+    public ResponseEntity<AuthUserResponse> me(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(authService.me(jwt));
+    }
 
 
 }

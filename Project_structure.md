@@ -24,6 +24,16 @@ Txn-Flow/
 
 ---
 
+## Completion timeline
+- [x] auth-service
+- [ ] gateway-service
+- [ ] wallet-core-service
+- [ ] payment-adapter-service
+- [ ] Kafka
+- [ ] notification-service
+- [ ] config-service
+- [ ] discovery-service
+
 ## SERVICE RESPONSIBILITIES
 
 1. auth-service
