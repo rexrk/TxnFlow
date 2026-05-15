@@ -1,9 +1,17 @@
 spring:
   application:
     name: gateway-service
-#  threads:
-#    virtual:
-#          enabled: true
+
+  threads:
+    virtual:
+      enabled: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/txnflow
+
   cloud:
     gateway:
       server:

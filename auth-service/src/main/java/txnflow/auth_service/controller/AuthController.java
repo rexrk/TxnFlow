@@ -25,7 +25,7 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @GetMapping("/hello")
+    @GetMapping("/public/hello")
     public String hello() {
         return "Hello! from TxnFlow!";
     }
