@@ -1,6 +1,9 @@
 spring:
   application:
     name: auth-service
+  web:
+    resources:
+      add-mappings: false
 
   security:
     oauth2:

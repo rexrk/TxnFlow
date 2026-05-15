@@ -16,6 +16,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import txnflow.auth_service.constant.JwtClaimConstants;
 import txnflow.auth_service.constant.RoleConstants;
 import txnflow.auth_service.dto.request.LoginRequest;
 import txnflow.auth_service.dto.request.LogoutRequest;
@@ -159,7 +160,7 @@ public class KeycloakAuthService implements AuthService {
             attributes = new HashMap<>();
         }
 
-        attributes.put("app_user_id", List.of(appUserId));
+        attributes.put(JwtClaimConstants.APP_USER_ID, List.of(appUserId));
 
         user.setAttributes(attributes);
         userResource.update(user);
@@ -261,9 +262,10 @@ public class KeycloakAuthService implements AuthService {
     @Override
     public AuthUserResponse me(Jwt jwt) {
         return new AuthUserResponse(
+                jwt.getClaimAsString(JwtClaimConstants.APP_USER_ID),
                 jwt.getSubject(),
-                jwt.getClaimAsString("email"),
-                jwt.getClaimAsString("name")
+                jwt.getClaimAsString(JwtClaimConstants.EMAIL),
+                jwt.getClaimAsString(JwtClaimConstants.NAME)
         );
     }
 }
