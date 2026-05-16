@@ -4,6 +4,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
+import txnflow.walletservice.constant.JwtClaimConstants;
 
 import java.util.UUID;
 
@@ -17,10 +18,10 @@ public class CurrentUserProvider {
             throw new IllegalStateException("Invalid authentication");
         }
 
-        String appUserId = jwtAuth.getToken().getClaimAsString("app_user_id");
+        String appUserId = jwtAuth.getToken().getClaimAsString(JwtClaimConstants.APP_USER_ID);
 
         if (appUserId == null || appUserId.isBlank()) {
-            throw new IllegalStateException("app_user_id claim missing");
+            throw new IllegalStateException(JwtClaimConstants.APP_USER_ID + " claim missing");
         }
 
         return UUID.fromString(appUserId);
