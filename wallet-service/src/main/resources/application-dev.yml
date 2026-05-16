@@ -31,17 +31,22 @@ logging:
   level:
     org.springframework.security: debug
 
-#management:
-#  tracing:
-#    sampling:
-#      probability: 1.0
-#
-#  opentelemetry:
-#    tracing:
-#      export:
-#        otlp:
-#          endpoint: http://localhost:4318/v1/traces
-#  otlp:
-#    metrics:
-#      export:
-#        enabled: false
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4318/v1/traces
+  otlp:
+    metrics:
+      export:
+        enabled: false

@@ -57,7 +57,8 @@ public class SecurityConfig {
             "/refresh",
             "/logout",
             "/public/**",
-            "/error"
+            "/error",
+            "/actuator/**"
     };
 
     @Bean

@@ -43,6 +43,11 @@ logging:
     org.springframework.security: debug
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
   tracing:
     sampling:
       probability: 1.0
