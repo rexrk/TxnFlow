@@ -9,4 +9,6 @@ public interface WalletService {
     WalletResponse createWalletForCurrentUser();
 
     WalletResponse createWalletForUser(UUID userId);
+
+    WalletResponse getMyWallet();
 }
