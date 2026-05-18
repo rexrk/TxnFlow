@@ -1,4 +1,4 @@
-package txnflow.auth_service.config;
+package txnflow.walletservice.config;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
@@ -14,7 +14,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import txnflow.auth_service.constant.RoleConstants;
+import txnflow.walletservice.constant.RoleConstants;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,13 +52,9 @@ public class SecurityConfig {
     }
 
     private static final String[] PUBLIC_ENDPOINTS = {
-            "/register",
-            "/login",
-            "/refresh",
-            "/logout",
+            "/actuator/**",
             "/public/**",
-            "/error",
-            "/actuator/**"
+            "/error"
     };
 
     @Bean

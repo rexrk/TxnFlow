@@ -1,6 +1,6 @@
 spring:
   application:
-    name: auth-service
+    name: wallet-service
   web:
     resources:
       add-mappings: false
@@ -12,7 +12,7 @@ spring:
           issuer-uri: ${KC_BASE_URL}/realms/txnflow
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/auth_db
+    url: jdbc:postgresql://localhost:5432/wallet_db
     username: txnflow
     password: txnflow_password
     hikari:
@@ -23,20 +23,9 @@ spring:
     show-sql: true
 
 server:
-  port: 8082
+  port: 8083
   servlet:
-    context-path: /api/v1/auth
-
-keycloak:
-  server-url: ${KC_BASE_URL}
-  realm: ${KC_REALM}
-  client-id: ${KC_CLIENT_ID}
-  client-secret: ${KC_CLIENT_SECRET}
-
-  admin-realm: ${KC_ADMIN_REALM}
-  admin-username: ${KC_ADMIN_USERNAME}
-  admin-password: ${KC_ADMIN_PASSWORD}
-  admin-client-id: ${KC_ADMIN_CLIENT_ID}
+    context-path: /api/v1/wallets
 
 logging:
   level:
