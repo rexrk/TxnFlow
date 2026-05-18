@@ -2,7 +2,8 @@ package txnflow.walletservice.transfer.enums;
 
 public enum TransferStatus {
     PENDING,
-    SUCCESS,
+    PROCESSING,
+    COMPLETED,
     FAILED,
     REVERSED
 }

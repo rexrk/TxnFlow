@@ -10,6 +10,7 @@ public record WalletResponse(
         UUID userId,
         BigDecimal balance,
         String currency,
-        WalletStatus status
+        WalletStatus status,
+        boolean pinSet
 ) {
 }

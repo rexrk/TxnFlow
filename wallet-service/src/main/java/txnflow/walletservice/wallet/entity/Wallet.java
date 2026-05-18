@@ -41,6 +41,12 @@ public class Wallet {
     @Column(nullable = false, length = 20)
     private WalletStatus status;
 
+    @Column(name = "pin_hash")
+    private String pinHash;
+
+    @Column(name = "pin_set", nullable = false)
+    private boolean pinSet;
+
     @Version
     private Long version;
 

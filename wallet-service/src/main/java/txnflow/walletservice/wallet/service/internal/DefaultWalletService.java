@@ -1,10 +1,13 @@
 package txnflow.walletservice.wallet.service.internal;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import txnflow.walletservice.constant.Currency;
 import txnflow.walletservice.exception.WalletNotFoundException;
 import txnflow.walletservice.security.CurrentUserProvider;
+import txnflow.walletservice.wallet.dto.request.SetWalletPinRequest;
 import txnflow.walletservice.wallet.dto.response.WalletResponse;
 import txnflow.walletservice.wallet.entity.Wallet;
 import txnflow.walletservice.wallet.enums.WalletStatus;
@@ -20,6 +23,7 @@ public class DefaultWalletService implements WalletService {
 
     private final WalletRepository walletRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     @Override
@@ -37,8 +41,9 @@ public class DefaultWalletService implements WalletService {
                     Wallet wallet = Wallet.builder()
                             .userId(userId)
                             .balance(BigDecimal.ZERO)
-                            .currency("INR")
+                            .currency(Currency.INR)
                             .status(WalletStatus.ACTIVE)
+                            .pinSet(false)
                             .build();
 
                     return toResponse(walletRepository.save(wallet));
@@ -56,6 +61,19 @@ public class DefaultWalletService implements WalletService {
         return toResponse(wallet);
     }
 
+    @Transactional
+    @Override
+    public WalletResponse setWalletPin(SetWalletPinRequest request) {
+        UUID userId = currentUserProvider.getCurrentAppUserId();
+
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
+
+        wallet.setPinHash(passwordEncoder.encode(request.pin()));
+        wallet.setPinSet(true);
+
+        return toResponse(walletRepository.save(wallet));
+    }
 
     private WalletResponse toResponse(Wallet wallet) {
         return new WalletResponse(
@@ -63,7 +81,8 @@ public class DefaultWalletService implements WalletService {
                 wallet.getUserId(),
                 wallet.getBalance(),
                 wallet.getCurrency(),
-                wallet.getStatus()
+                wallet.getStatus(),
+                wallet.isPinSet()
         );
     }
 }

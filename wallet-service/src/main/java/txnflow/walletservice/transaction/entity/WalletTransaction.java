@@ -3,8 +3,6 @@ package txnflow.walletservice.transaction.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-import txnflow.walletservice.transaction.enums.TransactionStatus;
 import txnflow.walletservice.transaction.enums.TransactionType;
 
 import java.math.BigDecimal;
@@ -14,8 +12,10 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "wallet_transactions",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_wallet_transaction_reference_id", columnNames = "reference_id")
+        indexes = {
+                @Index(name = "idx_wallet_transaction_wallet_id", columnList = "wallet_id"),
+                @Index(name = "idx_wallet_transaction_transfer_id", columnList = "transfer_id"),
+                @Index(name = "idx_wallet_transaction_created_at", columnList = "created_at")
         }
 )
 @Getter
@@ -32,31 +32,27 @@ public class WalletTransaction {
     @Column(name = "wallet_id", nullable = false, updatable = false)
     private UUID walletId;
 
-    @Column(name = "reference_id", nullable = false, unique = true, updatable = false)
-    private String referenceId;
-
-    @Column(name = "transfer_id")
-    private UUID transferId;
+    @Column(name = "transfer_id", updatable = false)
+    private UUID transferId;  // Nullable - only set for transfer transactions
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private TransactionType type;
+    private TransactionType type;  // DEBIT, CREDIT
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private TransactionStatus status;
-
-    @Column(nullable = false, precision = 19, scale = 2)
+    @Column(nullable = false, precision = 19, scale = 4)  // ✅ Changed to scale=4 for precision
     private BigDecimal amount;
+
+    @Column(name = "balance_after", nullable = false, precision = 19, scale = 4)
+    private BigDecimal balanceAfter;
 
     @Column(nullable = false, length = 3)
     private String currency;
+
+    @Column(length = 500)
+    private String description;  // ✅ Optional but useful
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp
-    @Column(nullable = false)
-    private Instant updatedAt;
 }
