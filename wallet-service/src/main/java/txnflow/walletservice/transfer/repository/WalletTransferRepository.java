@@ -8,5 +8,8 @@ import java.util.UUID;
 
 public interface WalletTransferRepository extends JpaRepository<WalletTransfer, UUID> {
 
-    Optional<WalletTransfer> findByIdempotencyKey(String idempotencyKey);
+    Optional<WalletTransfer> findBySenderWalletIdAndIdempotencyKey(
+            UUID senderWalletId,
+            String idempotencyKey
+    );
 }
