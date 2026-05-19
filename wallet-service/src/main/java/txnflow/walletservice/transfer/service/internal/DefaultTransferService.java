@@ -119,7 +119,7 @@ public class DefaultTransferService implements TransferService {
         transfer.setStatus(TransferStatus.COMPLETED);
         transfer.setCompletedAt(Instant.now());
 
-        WalletTransfer completedTransfer = walletTransferRepository.save(transfer);
+        WalletTransfer completedTransfer = walletTransferRepository.saveAndFlush(transfer);
 
         return toResponse(completedTransfer);
     }
