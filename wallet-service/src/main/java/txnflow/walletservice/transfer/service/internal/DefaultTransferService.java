@@ -1,43 +1,39 @@
 package txnflow.walletservice.transfer.service.internal;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import txnflow.walletservice.constant.Currency;
-import txnflow.walletservice.exception.InsufficientBalanceException;
+import txnflow.walletservice.exception.IdempotencyConflictException;
 import txnflow.walletservice.exception.InvalidTransferException;
 import txnflow.walletservice.exception.WalletNotFoundException;
 import txnflow.walletservice.security.CurrentUserProvider;
-import txnflow.walletservice.transaction.entity.WalletTransaction;
-import txnflow.walletservice.transaction.enums.TransactionType;
-import txnflow.walletservice.transaction.repository.WalletTransactionRepository;
 import txnflow.walletservice.transfer.dto.request.TransferMoneyRequest;
 import txnflow.walletservice.transfer.dto.response.TransferMoneyResponse;
 import txnflow.walletservice.transfer.entity.WalletTransfer;
-import txnflow.walletservice.transfer.enums.TransferStatus;
+import txnflow.walletservice.transfer.mapper.TransferMapper;
 import txnflow.walletservice.transfer.repository.WalletTransferRepository;
 import txnflow.walletservice.transfer.service.TransferService;
-import txnflow.walletservice.wallet.entity.Wallet;
-import txnflow.walletservice.wallet.enums.WalletStatus;
 import txnflow.walletservice.wallet.repository.WalletRepository;
 
-import java.math.BigDecimal;
-import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DefaultTransferService implements TransferService {
 
     private final WalletRepository walletRepository;
     private final WalletTransferRepository walletTransferRepository;
-    private final WalletTransactionRepository walletTransactionRepository;
+    private final TransferProcessor transferProcessor;
     private final CurrentUserProvider currentUserProvider;
-    private final PasswordEncoder passwordEncoder;
+    private final TransferMapper transferMapper;
 
     @Override
-    @Transactional
     public TransferMoneyResponse transferMoney(TransferMoneyRequest request) {
         UUID senderUserId = currentUserProvider.getCurrentAppUserId();
 
@@ -45,113 +41,76 @@ public class DefaultTransferService implements TransferService {
             throw new InvalidTransferException("Cannot transfer money to yourself");
         }
 
-        return walletTransferRepository.findByIdempotencyKey(request.idempotencyKey())
-                .map(this::toResponse)
-                .orElseGet(() -> processTransfer(senderUserId, request));
-    }
-
-    private TransferMoneyResponse processTransfer(UUID senderUserId, TransferMoneyRequest request) {
-        Wallet senderWallet = walletRepository.findByUserIdForUpdate(senderUserId)
+        UUID senderWalletId = walletRepository.findWalletIdByUserId(senderUserId)
                 .orElseThrow(() -> new WalletNotFoundException("Sender wallet not found"));
 
-        verifyWalletPin(senderWallet, request.walletPin());
+        String requestFingerprint = buildRequestFingerprint(senderUserId, request);
 
-        Wallet receiverWallet = walletRepository.findByUserIdForUpdate(request.receiverUserId())
-                .orElseThrow(() -> new WalletNotFoundException("Receiver wallet not found"));
+        Optional<WalletTransfer> existingTransfer =
+                walletTransferRepository.findBySenderWalletIdAndIdempotencyKey(
+                        senderWalletId,
+                        request.idempotencyKey()
+                );
 
-        validateWalletActive(senderWallet, "Sender wallet is not active");
-        validateWalletActive(receiverWallet, "Receiver wallet is not active");
-
-        if (senderWallet.getBalance().compareTo(request.amount()) < 0) {
-            throw new InsufficientBalanceException("Insufficient wallet balance");
+        if (existingTransfer.isPresent()) {
+            validateIdempotentRequest(existingTransfer.get(), requestFingerprint);
+            return transferMapper.toTransferMoneyResponse(existingTransfer.get(), true);
         }
 
-        WalletTransfer transfer = WalletTransfer.builder()
-                .idempotencyKey(request.idempotencyKey())
-                .senderWalletId(senderWallet.getId())
-                .receiverWalletId(receiverWallet.getId())
-                .amount(request.amount())
-                .currency(Currency.INR)
-                .status(TransferStatus.PROCESSING)
-                .description(request.description())
-                .build();
+        try {
+            return transferProcessor.processTransfer(senderUserId, request, requestFingerprint);
 
-        transfer = walletTransferRepository.save(transfer);
+        } catch (DataIntegrityViolationException ex ) {
+            log.warn("Duplicate idempotency race detected. senderWalletId={}, idempotencyKey={}",
+                    senderWalletId,
+                    request.idempotencyKey());
 
-        BigDecimal senderBalanceAfter =
-                senderWallet.getBalance().subtract(request.amount());
+            WalletTransfer transfer = walletTransferRepository
+                    .findBySenderWalletIdAndIdempotencyKey(senderWalletId, request.idempotencyKey())
+                    .orElseThrow(() -> new InvalidTransferException("Concurrent transfer failed"));
 
-        BigDecimal receiverBalanceAfter =
-                receiverWallet.getBalance().add(request.amount());
-
-        senderWallet.setBalance(senderBalanceAfter);
-        receiverWallet.setBalance(receiverBalanceAfter);
-
-        walletRepository.save(senderWallet);
-        walletRepository.save(receiverWallet);
-
-        WalletTransaction debitTransaction = walletTransactionRepository.save(
-                WalletTransaction.builder()
-                        .walletId(senderWallet.getId())
-                        .transferId(transfer.getId())
-                        .type(TransactionType.DEBIT)
-                        .amount(request.amount())
-                        .balanceAfter(senderBalanceAfter)
-                        .currency(Currency.INR)
-                        .description("Transfer sent")
-                        .build()
-        );
-
-        WalletTransaction creditTransaction = walletTransactionRepository.save(
-                WalletTransaction.builder()
-                        .walletId(receiverWallet.getId())
-                        .transferId(transfer.getId())
-                        .type(TransactionType.CREDIT)
-                        .amount(request.amount())
-                        .balanceAfter(receiverBalanceAfter)
-                        .currency(Currency.INR)
-                        .description("Transfer received")
-                        .build()
-        );
-
-        transfer.setDebitTransactionId(debitTransaction.getId());
-        transfer.setCreditTransactionId(creditTransaction.getId());
-        transfer.setStatus(TransferStatus.COMPLETED);
-        transfer.setCompletedAt(Instant.now());
-
-        WalletTransfer completedTransfer = walletTransferRepository.save(transfer);
-
-        return toResponse(completedTransfer);
-    }
-
-    private void validateWalletActive(Wallet wallet, String message) {
-        if (wallet.getStatus() != WalletStatus.ACTIVE) {
-            throw new InvalidTransferException(message);
+            validateIdempotentRequest(transfer, requestFingerprint);
+            return transferMapper.toTransferMoneyResponse(transfer, true);
         }
     }
 
-    private void verifyWalletPin(Wallet wallet, String rawPin) {
-        if (!wallet.isPinSet()) {
-            throw new InvalidTransferException("Wallet PIN is not set");
-        }
+    private String buildRequestFingerprint(
+            UUID senderUserId,
+            TransferMoneyRequest request
+    ) {
+        try {
+            String raw = senderUserId + "|" +
+                    request.receiverUserId() + "|" +
+                    request.amount().stripTrailingZeros().toPlainString() + "|" +
+                    Currency.INR;
 
-        if (!passwordEncoder.matches(rawPin, wallet.getPinHash())) {
-            throw new InvalidTransferException("Invalid wallet PIN");
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+            byte[] hash = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
+
+            StringBuilder hex = new StringBuilder();
+
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+
+            return hex.toString();
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to generate request fingerprint", ex);
         }
     }
 
-    private TransferMoneyResponse toResponse(WalletTransfer transfer) {
-        return new TransferMoneyResponse(
-                transfer.getId(),
-                transfer.getStatus(),
-                transfer.getAmount(),
-                transfer.getCurrency(),
-                transfer.getSenderWalletId(),
-                transfer.getReceiverWalletId(),
-                transfer.getDebitTransactionId(),
-                transfer.getCreditTransactionId(),
-                transfer.getCreatedAt(),
-                transfer.getCompletedAt()
-        );
+    private void validateIdempotentRequest(
+            WalletTransfer existingTransfer,
+            String requestFingerprint
+    ) {
+        if (!existingTransfer.getRequestFingerprint().equals(requestFingerprint)) {
+            throw new IdempotencyConflictException(
+                    "Idempotency key already used with different request"
+            );
+
+        }
     }
+
 }

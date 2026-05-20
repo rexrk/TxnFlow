@@ -15,6 +15,7 @@ public record TransferMoneyResponse(
         UUID debitTransactionId,
         UUID creditTransactionId,
         Instant createdAt,
-        Instant completedAt
+        Instant completedAt,
+        boolean idempotentReplay
 ) {
 }

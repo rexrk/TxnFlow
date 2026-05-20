@@ -14,7 +14,10 @@ import java.util.UUID;
 @Table(
         name = "wallet_transfers",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_wallet_transfer_idempotency_key", columnNames = "idempotency_key")
+                @UniqueConstraint(
+                        name = "uk_wallet_transfer_sender_idempotency_key",
+                        columnNames = {"sender_wallet_id", "idempotency_key"}
+                )
         },
         indexes = {
                 @Index(name = "idx_sender_wallet", columnList = "sender_wallet_id"),
@@ -33,8 +36,11 @@ public class WalletTransfer {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "idempotency_key", nullable = false, unique = true, updatable = false, length = 120)
+    @Column(name = "idempotency_key", nullable = false, updatable = false, length = 120)
     private String idempotencyKey;
+
+    @Column(name = "request_fingerprint", nullable = false, updatable = false, length = 64)
+    private String requestFingerprint;
 
     @Column(name = "sender_wallet_id", nullable = false, updatable = false)
     private UUID senderWalletId;
