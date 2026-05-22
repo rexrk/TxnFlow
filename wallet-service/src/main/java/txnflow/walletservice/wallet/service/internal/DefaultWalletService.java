@@ -11,6 +11,7 @@ import txnflow.walletservice.wallet.dto.request.SetWalletPinRequest;
 import txnflow.walletservice.wallet.dto.response.WalletResponse;
 import txnflow.walletservice.wallet.entity.Wallet;
 import txnflow.walletservice.wallet.enums.WalletStatus;
+import txnflow.walletservice.wallet.mapper.WalletMapper;
 import txnflow.walletservice.wallet.repository.WalletRepository;
 import txnflow.walletservice.wallet.service.WalletService;
 
@@ -24,6 +25,7 @@ public class DefaultWalletService implements WalletService {
     private final WalletRepository walletRepository;
     private final CurrentUserProvider currentUserProvider;
     private final PasswordEncoder passwordEncoder;
+    private final WalletMapper walletMapper;
 
     @Transactional
     @Override
@@ -36,7 +38,7 @@ public class DefaultWalletService implements WalletService {
     @Override
     public WalletResponse createWalletForUser(UUID userId) {
         return walletRepository.findByUserId(userId)
-                .map(this::toResponse)
+                .map(walletMapper::toWalletResponse)
                 .orElseGet(() -> {
                     Wallet wallet = Wallet.builder()
                             .userId(userId)
@@ -46,7 +48,7 @@ public class DefaultWalletService implements WalletService {
                             .pinSet(false)
                             .build();
 
-                    return toResponse(walletRepository.save(wallet));
+                    return walletMapper.toWalletResponse(walletRepository.save(wallet));
                 });
     }
 
@@ -58,7 +60,7 @@ public class DefaultWalletService implements WalletService {
         Wallet wallet = walletRepository.findByUserId(userId)
                 .orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
 
-        return toResponse(wallet);
+        return walletMapper.toWalletResponse(wallet);
     }
 
     @Transactional
@@ -72,17 +74,15 @@ public class DefaultWalletService implements WalletService {
         wallet.setPinHash(passwordEncoder.encode(request.pin()));
         wallet.setPinSet(true);
 
-        return toResponse(walletRepository.save(wallet));
+        return walletMapper.toWalletResponse(walletRepository.save(wallet));
     }
 
-    private WalletResponse toResponse(Wallet wallet) {
-        return new WalletResponse(
-                wallet.getId(),
-                wallet.getUserId(),
-                wallet.getBalance(),
-                wallet.getCurrency(),
-                wallet.getStatus(),
-                wallet.isPinSet()
-        );
+    @Transactional(readOnly = true)
+    @Override
+    public UUID getCurrentWalletId() {
+        UUID userId = currentUserProvider.getCurrentAppUserId();
+
+        return walletRepository.findWalletIdByUserId(userId)
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
     }
 }

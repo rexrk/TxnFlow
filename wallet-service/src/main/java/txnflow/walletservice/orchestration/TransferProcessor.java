@@ -1,4 +1,4 @@
-package txnflow.walletservice.transfer.service.internal;
+package txnflow.walletservice.orchestration;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -9,6 +9,7 @@ import txnflow.walletservice.exception.InsufficientBalanceException;
 import txnflow.walletservice.exception.InvalidTransferException;
 import txnflow.walletservice.exception.WalletNotFoundException;
 import txnflow.walletservice.transaction.entity.WalletTransaction;
+import txnflow.walletservice.transaction.enums.TransactionCategory;
 import txnflow.walletservice.transaction.enums.TransactionType;
 import txnflow.walletservice.transaction.repository.WalletTransactionRepository;
 import txnflow.walletservice.transfer.dto.request.TransferMoneyRequest;
@@ -89,7 +90,9 @@ public class TransferProcessor {
                         .amount(request.amount())
                         .balanceAfter(senderBalanceAfter)
                         .currency(Currency.INR)
-                        .description("Transfer sent")
+                        .description(request.description())
+                        .counterpartyUserId(request.receiverUserId())
+                        .category(TransactionCategory.PAID)
                         .build()
         );
 
@@ -101,7 +104,9 @@ public class TransferProcessor {
                         .amount(request.amount())
                         .balanceAfter(receiverBalanceAfter)
                         .currency(Currency.INR)
-                        .description("Transfer received")
+                        .description("Payment received")
+                        .counterpartyUserId(senderUserId)
+                        .category(TransactionCategory.RECEIVED)
                         .build()
         );
 
