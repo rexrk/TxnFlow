@@ -1,6 +1,7 @@
 package txnflow.walletservice.wallet.service.internal;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +12,7 @@ import txnflow.walletservice.wallet.dto.request.SetWalletPinRequest;
 import txnflow.walletservice.wallet.dto.response.WalletResponse;
 import txnflow.walletservice.wallet.entity.Wallet;
 import txnflow.walletservice.wallet.enums.WalletStatus;
+import txnflow.walletservice.wallet.mapper.WalletMapper;
 import txnflow.walletservice.wallet.repository.WalletRepository;
 import txnflow.walletservice.wallet.service.WalletService;
 
@@ -18,12 +20,14 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class DefaultWalletService implements WalletService {
 
     private final WalletRepository walletRepository;
     private final CurrentUserProvider currentUserProvider;
     private final PasswordEncoder passwordEncoder;
+    private final WalletMapper walletMapper;
 
     @Transactional
     @Override
@@ -36,7 +40,7 @@ public class DefaultWalletService implements WalletService {
     @Override
     public WalletResponse createWalletForUser(UUID userId) {
         return walletRepository.findByUserId(userId)
-                .map(this::toResponse)
+                .map(walletMapper::toWalletResponse)
                 .orElseGet(() -> {
                     Wallet wallet = Wallet.builder()
                             .userId(userId)
@@ -46,7 +50,10 @@ public class DefaultWalletService implements WalletService {
                             .pinSet(false)
                             .build();
 
-                    return toResponse(walletRepository.save(wallet));
+                    Wallet savedWallet = walletRepository.save(wallet);
+                    log.info("Wallet created. walletId={} userId={}", savedWallet.getId(), userId);
+
+                    return walletMapper.toWalletResponse(savedWallet);
                 });
     }
 
@@ -56,9 +63,12 @@ public class DefaultWalletService implements WalletService {
         UUID userId = currentUserProvider.getCurrentAppUserId();
 
         Wallet wallet = walletRepository.findByUserId(userId)
-                .orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
+                .orElseThrow(() -> {
+                    log.warn("Wallet lookup failed. userId={}", userId);
+                    return new WalletNotFoundException("Wallet not found");
+                });
 
-        return toResponse(wallet);
+        return walletMapper.toWalletResponse(wallet);
     }
 
     @Transactional
@@ -67,22 +77,29 @@ public class DefaultWalletService implements WalletService {
         UUID userId = currentUserProvider.getCurrentAppUserId();
 
         Wallet wallet = walletRepository.findByUserId(userId)
-                .orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
+                .orElseThrow(() -> {
+                    log.warn("Wallet PIN update failed: wallet not found. userId={}", userId);
+                    return new WalletNotFoundException("Wallet not found");
+                });
 
         wallet.setPinHash(passwordEncoder.encode(request.pin()));
         wallet.setPinSet(true);
 
-        return toResponse(walletRepository.save(wallet));
+        Wallet savedWallet = walletRepository.save(wallet);
+        log.info("Wallet PIN updated. walletId={} userId={}", savedWallet.getId(), userId);
+
+        return walletMapper.toWalletResponse(savedWallet);
     }
 
-    private WalletResponse toResponse(Wallet wallet) {
-        return new WalletResponse(
-                wallet.getId(),
-                wallet.getUserId(),
-                wallet.getBalance(),
-                wallet.getCurrency(),
-                wallet.getStatus(),
-                wallet.isPinSet()
-        );
+    @Transactional(readOnly = true)
+    @Override
+    public UUID getCurrentWalletId() {
+        UUID userId = currentUserProvider.getCurrentAppUserId();
+
+        return walletRepository.findWalletIdByUserId(userId)
+                .orElseThrow(() -> {
+                    log.warn("Current wallet lookup failed. userId={}", userId);
+                    return new WalletNotFoundException("Wallet not found");
+                });
     }
 }

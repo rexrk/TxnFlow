@@ -3,6 +3,7 @@ package txnflow.walletservice.transaction.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import txnflow.walletservice.transaction.enums.TransactionCategory;
 import txnflow.walletservice.transaction.enums.TransactionType;
 
 import java.math.BigDecimal;
@@ -54,5 +55,10 @@ public class WalletTransaction {
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
+
+    private UUID counterpartyUserId;
+
+    @Enumerated(EnumType.STRING)
+    private TransactionCategory category;
 
 }

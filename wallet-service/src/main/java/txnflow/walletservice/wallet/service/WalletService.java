@@ -14,4 +14,6 @@ public interface WalletService {
     WalletResponse getMyWallet();
 
     WalletResponse setWalletPin(SetWalletPinRequest request);
+
+    UUID getCurrentWalletId();
 }

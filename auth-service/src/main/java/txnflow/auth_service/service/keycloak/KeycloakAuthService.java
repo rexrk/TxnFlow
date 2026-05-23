@@ -48,7 +48,7 @@ public class KeycloakAuthService implements AuthService {
 
     @Override
     public void register(RegisterRequest request) {
-        log.info("User registration request {}", request.email());
+        log.info("User registration requested");
 
         Response response = null;
         String keycloakUserId = null;
@@ -62,10 +62,12 @@ public class KeycloakAuthService implements AuthService {
                     .create(user);
 
             if (response.getStatus() == 409) {
+                log.warn("User registration rejected: user already exists");
                 throw new UserAlreadyExistsException("User already exists");
             }
 
             if (response.getStatus() != 201) {
+                log.error("Keycloak user creation failed. status={}", response.getStatus());
                 throw new RuntimeException("Failed to create user. Status: " + response.getStatus());
             }
 
@@ -85,6 +87,7 @@ public class KeycloakAuthService implements AuthService {
             updateKeycloakAppUserId(keycloakUserId, appUser.getId().toString());
 
             assignUserRole(keycloakUserId);
+            log.info("User registration completed. appUserId={}", appUser.getId());
 
         } catch (UserAlreadyExistsException ex) {
             throw ex;
@@ -96,10 +99,11 @@ public class KeycloakAuthService implements AuthService {
                         .users()
                         .delete(keycloakUserId)) {
 
-                    log.info("Rolled back Keycloak user {}", keycloakUserId);
+                    log.info("Rolled back Keycloak user. keycloakUserId={}", keycloakUserId);
                 }
             }
 
+            log.error("User registration failed", ex);
             throw new RuntimeException("Registration failed", ex);
 
         } finally {
@@ -184,6 +188,8 @@ public class KeycloakAuthService implements AuthService {
 
     @Override
     public TokenResponse login(LoginRequest request) {
+        log.info("User login requested");
+
         String tokenUrl = props.serverUrl()
                 + "/realms/"
                 + props.realm()
@@ -198,20 +204,30 @@ public class KeycloakAuthService implements AuthService {
         form.add(OAuth2Constants.SCOPE, "openid profile email");
 
         try {
-            return restClient.post()
+            TokenResponse tokenResponse = restClient.post()
                     .uri(tokenUrl)
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(form)
                     .retrieve()
                     .body(TokenResponse.class);
 
+            log.info("User login completed");
+            return tokenResponse;
+
         } catch (HttpClientErrorException.BadRequest ex) {
+            log.warn("User login rejected: invalid credentials");
             throw new InvalidCredentialsException("Invalid email or password");
+
+        } catch (Exception ex) {
+            log.error("User login failed", ex);
+            throw ex;
         }
     }
 
     @Override
     public TokenResponse refresh(RefreshTokenRequest request) {
+        log.info("Token refresh requested");
+
         String tokenUrl = props.serverUrl()
                 + "/realms/"
                 + props.realm()
@@ -225,20 +241,29 @@ public class KeycloakAuthService implements AuthService {
         form.add(OAuth2Constants.REFRESH_TOKEN, request.refreshToken());
 
         try {
-            return restClient.post()
+            TokenResponse tokenResponse = restClient.post()
                     .uri(tokenUrl)
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(form)
                     .retrieve()
                     .body(TokenResponse.class);
 
+            log.info("Token refresh completed");
+            return tokenResponse;
+
         } catch (HttpClientErrorException.BadRequest ex) {
+            log.warn("Token refresh rejected: invalid refresh token");
             throw new InvalidRefreshTokenException("Invalid or expired refresh token");
+
+        } catch (Exception ex) {
+            log.error("Token refresh failed", ex);
+            throw ex;
         }
     }
 
     @Override
     public void logout(LogoutRequest request) {
+        log.info("User logout requested");
 
         String logoutUrl = props.serverUrl()
                 + "/realms/"
@@ -251,12 +276,20 @@ public class KeycloakAuthService implements AuthService {
         form.add(OAuth2Constants.CLIENT_SECRET, props.clientSecret());
         form.add(OAuth2Constants.REFRESH_TOKEN, request.refreshToken());
 
-        restClient.post()
-                .uri(logoutUrl)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(form)
-                .retrieve()
-                .toBodilessEntity();
+        try {
+            restClient.post()
+                    .uri(logoutUrl)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("User logout completed");
+
+        } catch (Exception ex) {
+            log.error("User logout failed", ex);
+            throw ex;
+        }
     }
 
     @Override

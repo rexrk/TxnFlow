@@ -1,6 +1,7 @@
 package txnflow.gatewayservice.security;
 
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -12,6 +13,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -31,6 +33,8 @@ public class SecurityConfig {
                                                    AuthenticationEntryPoint authenticationEntryPoint,
                                                    AccessDeniedHandler accessDeniedHandler
     ) {
+        log.info("Configuring gateway security rules");
+
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
@@ -51,6 +55,11 @@ public class SecurityConfig {
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
+            log.warn("Unauthorized gateway request method={} path={}",
+                    request.getMethod(),
+                    sanitizedPath(request.getRequestURI())
+            );
+
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write("""
@@ -62,11 +71,26 @@ public class SecurityConfig {
     @Bean
     public AccessDeniedHandler accessDeniedHandler() {
         return (request, response, accessDeniedException) -> {
+            log.warn("Forbidden gateway request method={} path={}",
+                    request.getMethod(),
+                    sanitizedPath(request.getRequestURI())
+            );
+
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write("""
                     {"message":"Access denied"}
                     """);
         };
+    }
+
+    private String sanitizedPath(String path) {
+        if (path == null || path.isBlank()) {
+            return "/";
+        }
+
+        return path
+                .replaceAll("/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", "/{id}")
+                .replaceAll("/\\d+", "/{id}");
     }
 }
