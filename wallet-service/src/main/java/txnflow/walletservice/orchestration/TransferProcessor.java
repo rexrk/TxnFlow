@@ -1,6 +1,7 @@
 package txnflow.walletservice.orchestration;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class TransferProcessor {
 
@@ -43,17 +45,25 @@ public class TransferProcessor {
             String requestFingerprint
     ) {
         Wallet senderWallet = walletRepository.findByUserIdForUpdate(senderUserId)
-                .orElseThrow(() -> new WalletNotFoundException("Sender wallet not found"));
+                .orElseThrow(() -> {
+                    log.warn("Transfer processing failed: sender wallet not found. senderUserId={}", senderUserId);
+                    return new WalletNotFoundException("Sender wallet not found");
+                });
 
         verifyWalletPin(senderWallet, request.walletPin());
 
         Wallet receiverWallet = walletRepository.findByUserIdForUpdate(request.receiverUserId())
-                .orElseThrow(() -> new WalletNotFoundException("Receiver wallet not found"));
+                .orElseThrow(() -> {
+                    log.warn("Transfer processing failed: receiver wallet not found. receiverUserId={}",
+                            request.receiverUserId());
+                    return new WalletNotFoundException("Receiver wallet not found");
+                });
 
         validateWalletActive(senderWallet, "Sender wallet is not active");
         validateWalletActive(receiverWallet, "Receiver wallet is not active");
 
         if (senderWallet.getBalance().compareTo(request.amount()) < 0) {
+            log.warn("Transfer rejected: insufficient balance. senderWalletId={}", senderWallet.getId());
             throw new InsufficientBalanceException("Insufficient wallet balance");
         }
 
@@ -116,22 +126,29 @@ public class TransferProcessor {
         transfer.setCompletedAt(Instant.now());
 
         WalletTransfer completedTransfer = walletTransferRepository.saveAndFlush(transfer);
+        log.info("Transfer completed. transferId={} senderWalletId={} receiverWalletId={}",
+                completedTransfer.getId(),
+                senderWallet.getId(),
+                receiverWallet.getId());
 
         return transferMapper.toTransferMoneyResponse(completedTransfer, false);
     }
 
     private void validateWalletActive(Wallet wallet, String message) {
         if (wallet.getStatus() != WalletStatus.ACTIVE) {
+            log.warn("Transfer rejected: wallet is not active. walletId={}", wallet.getId());
             throw new InvalidTransferException(message);
         }
     }
 
     private void verifyWalletPin(Wallet wallet, String rawPin) {
         if (!wallet.isPinSet()) {
+            log.warn("Transfer rejected: wallet PIN is not set. walletId={}", wallet.getId());
             throw new InvalidTransferException("Wallet PIN is not set");
         }
 
         if (!passwordEncoder.matches(rawPin, wallet.getPinHash())) {
+            log.warn("Transfer rejected: invalid wallet PIN. walletId={}", wallet.getId());
             throw new InvalidTransferException("Invalid wallet PIN");
         }
     }

@@ -39,11 +39,15 @@ public class DefaultTransferService implements TransferService {
         UUID senderUserId = currentUserProvider.getCurrentAppUserId();
 
         if (senderUserId.equals(request.receiverUserId())) {
+            log.warn("Transfer rejected: sender and receiver are same. userId={}", senderUserId);
             throw new InvalidTransferException("Cannot transfer money to yourself");
         }
 
         UUID senderWalletId = walletRepository.findWalletIdByUserId(senderUserId)
-                .orElseThrow(() -> new WalletNotFoundException("Sender wallet not found"));
+                .orElseThrow(() -> {
+                    log.warn("Transfer rejected: sender wallet not found. senderUserId={}", senderUserId);
+                    return new WalletNotFoundException("Sender wallet not found");
+                });
 
         String requestFingerprint = buildRequestFingerprint(senderUserId, request);
 
@@ -55,16 +59,17 @@ public class DefaultTransferService implements TransferService {
 
         if (existingTransfer.isPresent()) {
             validateIdempotentRequest(existingTransfer.get(), requestFingerprint);
+            log.info("Idempotent transfer replayed. transferId={}", existingTransfer.get().getId());
             return transferMapper.toTransferMoneyResponse(existingTransfer.get(), true);
         }
+
+        log.info("Transfer requested. senderWalletId={} receiverUserId={}", senderWalletId, request.receiverUserId());
 
         try {
             return transferProcessor.processTransfer(senderUserId, request, requestFingerprint);
 
         } catch (DataIntegrityViolationException ex ) {
-            log.warn("Duplicate idempotency race detected. senderWalletId={}, idempotencyKey={}",
-                    senderWalletId,
-                    request.idempotencyKey());
+            log.warn("Duplicate idempotency race detected. senderWalletId={}", senderWalletId);
 
             WalletTransfer transfer = walletTransferRepository
                     .findBySenderWalletIdAndIdempotencyKey(senderWalletId, request.idempotencyKey())
@@ -107,6 +112,7 @@ public class DefaultTransferService implements TransferService {
             String requestFingerprint
     ) {
         if (!existingTransfer.getRequestFingerprint().equals(requestFingerprint)) {
+            log.warn("Idempotency conflict detected. transferId={}", existingTransfer.getId());
             throw new IdempotencyConflictException(
                     "Idempotency key already used with different request"
             );

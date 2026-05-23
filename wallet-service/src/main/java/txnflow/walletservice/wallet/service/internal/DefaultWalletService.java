@@ -1,6 +1,7 @@
 package txnflow.walletservice.wallet.service.internal;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class DefaultWalletService implements WalletService {
 
@@ -48,7 +50,10 @@ public class DefaultWalletService implements WalletService {
                             .pinSet(false)
                             .build();
 
-                    return walletMapper.toWalletResponse(walletRepository.save(wallet));
+                    Wallet savedWallet = walletRepository.save(wallet);
+                    log.info("Wallet created. walletId={} userId={}", savedWallet.getId(), userId);
+
+                    return walletMapper.toWalletResponse(savedWallet);
                 });
     }
 
@@ -58,7 +63,10 @@ public class DefaultWalletService implements WalletService {
         UUID userId = currentUserProvider.getCurrentAppUserId();
 
         Wallet wallet = walletRepository.findByUserId(userId)
-                .orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
+                .orElseThrow(() -> {
+                    log.warn("Wallet lookup failed. userId={}", userId);
+                    return new WalletNotFoundException("Wallet not found");
+                });
 
         return walletMapper.toWalletResponse(wallet);
     }
@@ -69,12 +77,18 @@ public class DefaultWalletService implements WalletService {
         UUID userId = currentUserProvider.getCurrentAppUserId();
 
         Wallet wallet = walletRepository.findByUserId(userId)
-                .orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
+                .orElseThrow(() -> {
+                    log.warn("Wallet PIN update failed: wallet not found. userId={}", userId);
+                    return new WalletNotFoundException("Wallet not found");
+                });
 
         wallet.setPinHash(passwordEncoder.encode(request.pin()));
         wallet.setPinSet(true);
 
-        return walletMapper.toWalletResponse(walletRepository.save(wallet));
+        Wallet savedWallet = walletRepository.save(wallet);
+        log.info("Wallet PIN updated. walletId={} userId={}", savedWallet.getId(), userId);
+
+        return walletMapper.toWalletResponse(savedWallet);
     }
 
     @Transactional(readOnly = true)
@@ -83,6 +97,9 @@ public class DefaultWalletService implements WalletService {
         UUID userId = currentUserProvider.getCurrentAppUserId();
 
         return walletRepository.findWalletIdByUserId(userId)
-                .orElseThrow(() -> new WalletNotFoundException("Wallet not found"));
+                .orElseThrow(() -> {
+                    log.warn("Current wallet lookup failed. userId={}", userId);
+                    return new WalletNotFoundException("Wallet not found");
+                });
     }
 }

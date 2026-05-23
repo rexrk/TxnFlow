@@ -1,6 +1,7 @@
 package txnflow.walletservice.transaction.service.internal;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import txnflow.walletservice.exception.WalletTransactionNotFoundException;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class DefaultTransactionService implements TransactionService {
 
@@ -32,9 +34,13 @@ public class DefaultTransactionService implements TransactionService {
         UUID walletId = walletService.getCurrentWalletId();
 
         WalletTransaction transaction = walletTransactionRepository.findById(transactionId)
-                .orElseThrow(() -> new WalletTransactionNotFoundException("Transaction not found"));
+                .orElseThrow(() -> {
+                    log.warn("Transaction lookup failed. transactionId={} walletId={}", transactionId, walletId);
+                    return new WalletTransactionNotFoundException("Transaction not found");
+                });
 
         if (!transaction.getWalletId().equals(walletId)) {
+            log.warn("Transaction access rejected. transactionId={} walletId={}", transactionId, walletId);
             throw new WalletTransactionNotFoundException("Transaction not found");
         }
 
@@ -46,11 +52,14 @@ public class DefaultTransactionService implements TransactionService {
     public List<WalletTransactionListItemResponse> getRecentTransactions() {
         UUID walletId = walletService.getCurrentWalletId();
 
-        return walletTransactionRepository
+        List<WalletTransactionListItemResponse> transactions = walletTransactionRepository
                 .findTop20ByWalletIdOrderByCreatedAtDesc(walletId)
                 .stream()
                 .map(transactionMapper::toWalletTransactionListItemResponse)
                 .toList();
+
+        log.info("Recent transactions fetched. walletId={} count={}", walletId, transactions.size());
+        return transactions;
     }
 
     @Override
@@ -63,7 +72,7 @@ public class DefaultTransactionService implements TransactionService {
         Instant fromInstant = from.atStartOfDay(ZoneOffset.UTC).toInstant();
         Instant toInstant = to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
 
-        return walletTransactionRepository
+        List<WalletTransactionResponse> transactions = walletTransactionRepository
                 .findByWalletIdAndCreatedAtBetweenOrderByCreatedAtDesc(
                         walletId,
                         fromInstant,
@@ -72,6 +81,13 @@ public class DefaultTransactionService implements TransactionService {
                 .stream()
                 .map(transactionMapper::toWalletTransactionResponse)
                 .toList();
+
+        log.info("Transactions fetched. walletId={} count={} from={} to={}",
+                walletId,
+                transactions.size(),
+                from,
+                to);
+        return transactions;
     }
 
 }
