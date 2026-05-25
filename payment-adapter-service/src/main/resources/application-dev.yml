@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: payment-adapter-service
+  web:
+    resources:
+      add-mappings: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KC_BASE_URL}/realms/txnflow
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payment_db
+    username: txnflow
+    password: txnflow_password
+    hikari:
+      connection-timeout: 3000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+server:
+  port: 8084
+  servlet:
+    context-path: /api/v1/payments
+
+logging:
+  level:
+    org.springframework.security: info
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4318/v1/traces
+  otlp:
+    metrics:
+      export:
+        enabled: false
