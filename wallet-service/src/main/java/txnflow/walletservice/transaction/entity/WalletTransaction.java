@@ -20,8 +20,7 @@ import java.util.UUID;
         }
 )
 @Getter
-@Setter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 public class WalletTransaction {
@@ -37,28 +36,30 @@ public class WalletTransaction {
     private UUID transferId;  // Nullable - only set for transfer transactions
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, updatable = false)
     private TransactionType type;  // DEBIT, CREDIT
 
-    @Column(nullable = false, precision = 19, scale = 4)  // ✅ Changed to scale=4 for precision
+    @Column(nullable = false, precision = 19, scale = 4, updatable = false)  // ✅ Changed to scale=4 for precision
     private BigDecimal amount;
 
-    @Column(name = "balance_after", nullable = false, precision = 19, scale = 4)
+    @Column(name = "balance_after", nullable = false, precision = 19, scale = 4, updatable = false)
     private BigDecimal balanceAfter;
 
-    @Column(nullable = false, length = 3)
+    @Column(nullable = false, length = 3, updatable = false)
     private String currency;
 
-    @Column(length = 500)
+    @Column(length = 500, updatable = false)
     private String description;  // ✅ Optional but useful
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(updatable = false)
     private UUID counterpartyUserId;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, updatable = false)
     private TransactionCategory category;
 
 }
