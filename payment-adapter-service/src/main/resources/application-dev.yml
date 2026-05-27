@@ -22,6 +22,12 @@ spring:
       ddl-auto: update
     show-sql: false
 
+razorpay:
+  checkout-base-url: http://localhost:8081
+  key-id: ${RAZORPAY_KEY_ID}
+  key-secret: ${RAZORPAY_KEY_SECRET}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
+
 server:
   port: 8084
   servlet:

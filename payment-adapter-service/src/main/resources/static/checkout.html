@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TxnFlow Checkout</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+
+            margin: 0;
+            height: 100vh;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            background:
+                    radial-gradient(circle at top left, #312e81, transparent 30%),
+                    radial-gradient(circle at bottom right, #0f766e, transparent 30%),
+                    #020617;
+
+            overflow: hidden;
+
+            color: white;
+        }
+
+        .glass-card {
+
+            width: 100%;
+            max-width: 650px;
+
+            padding: 40px;
+
+            border-radius: 24px;
+
+            background: rgba(255, 255, 255, 0.08);
+
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+
+            border: 1px solid rgba(255,255,255,0.12);
+
+            box-shadow:
+                    0 8px 32px rgba(0,0,0,0.35);
+
+            position: relative;
+        }
+
+        .glass-card::before {
+
+            content: "";
+
+            position: absolute;
+
+            inset: 0;
+
+            border-radius: 24px;
+
+            padding: 1px;
+
+            background:
+                    linear-gradient(
+                            135deg,
+                            rgba(255,255,255,0.3),
+                            rgba(255,255,255,0.05)
+                    );
+
+            -webkit-mask:
+                    linear-gradient(#fff 0 0) content-box,
+                    linear-gradient(#fff 0 0);
+
+            -webkit-mask-composite: xor;
+
+            mask-composite: exclude;
+
+            pointer-events: none;
+        }
+
+        h2 {
+
+            margin-top: 0;
+            margin-bottom: 32px;
+
+            text-align: center;
+
+            font-size: 30px;
+            font-weight: 700;
+
+            letter-spacing: 0.5px;
+        }
+
+        label {
+
+            display: block;
+
+            margin-bottom: 10px;
+
+            font-size: 14px;
+            font-weight: 600;
+
+            color: rgba(255,255,255,0.75);
+        }
+
+        input {
+
+            width: 100%;
+
+            padding: 16px;
+
+            border-radius: 14px;
+
+            border: 1px solid rgba(255,255,255,0.12);
+
+            background: rgba(255,255,255,0.06);
+
+            color: white;
+
+            font-size: 14px;
+
+            outline: none;
+
+            transition:
+                    border 0.2s ease,
+                    background 0.2s ease,
+                    transform 0.1s ease;
+        }
+
+        input::placeholder {
+            color: rgba(255,255,255,0.45);
+        }
+
+        input:focus {
+
+            border-color: rgba(99,102,241,0.8);
+
+            background: rgba(255,255,255,0.1);
+        }
+
+        button {
+
+            width: 100%;
+
+            margin-top: 28px;
+
+            padding: 16px;
+
+            border: none;
+            border-radius: 14px;
+
+            background:
+                    linear-gradient(
+                            135deg,
+                            #6366f1,
+                            #8b5cf6
+                    );
+
+            color: white;
+
+            font-size: 16px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition:
+                    transform 0.12s ease,
+                    opacity 0.2s ease,
+                    box-shadow 0.2s ease;
+
+            box-shadow:
+                    0 10px 24px rgba(99,102,241,0.35);
+        }
+
+        button:hover {
+
+            opacity: 0.95;
+
+            transform: translateY(-1px);
+        }
+
+        button:active {
+
+            transform: scale(0.98);
+        }
+
+        .helper-text {
+
+            margin-top: 14px;
+
+            text-align: center;
+
+            font-size: 13px;
+
+            color: rgba(255,255,255,0.55);
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="glass-card">
+
+    <h2>TxnFlow Checkout</h2>
+
+    <div>
+
+        <label>JWT Token</label>
+
+        <input
+                type="text"
+                id="token"
+                placeholder="Paste your JWT token here"
+        >
+
+    </div>
+
+    <button onclick="startPayment()">
+        Start Payment
+    </button>
+
+    <div class="helper-text">
+        Secure Razorpay test payment flow
+    </div>
+
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+
+    async function startPayment() {
+
+        const token = document.getElementById("token").value;
+
+        const params = new URLSearchParams(window.location.search);
+
+        const ledgerId = params.get("ledgerId");
+
+        if (!ledgerId) {
+            alert("Ledger ID missing");
+            return;
+        }
+
+        const response = await fetch(
+            `/api/v1/payments/${ledgerId}`,
+            {
+                method: "GET",
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            }
+        );
+
+        if (!response.ok) {
+            alert("Failed to fetch payment details");
+            return;
+        }
+
+        const data = await response.json();
+
+        const options = {
+
+            key: data.key,
+            amount: data.amount,
+            currency: data.currency,
+            order_id: data.orderId,
+
+            name: "TxnFlow",
+
+            handler: function (response) {
+
+                console.log("Payment Success", response);
+
+                alert("Payment Successful");
+            }
+        };
+
+        const razorpay = new Razorpay(options);
+
+        razorpay.open();
+    }
+
+</script>
+
+</body>
+</html>
