@@ -19,4 +19,6 @@ public interface WalletTransactionRepository
             Instant from,
             Instant to
     );
+
+    boolean existsByLedgerId(UUID ledgerId);
 }

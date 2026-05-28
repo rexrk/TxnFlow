@@ -29,7 +29,7 @@ public class OutboxEvent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+    private UUID id;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false)

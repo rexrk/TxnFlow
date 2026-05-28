@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import txnflow.paymentadapterservice.dto.response.WalletCreditEvent;
 import txnflow.paymentadapterservice.entity.OutboxEvent;
 import txnflow.paymentadapterservice.enums.OutboxStatus;
 import txnflow.paymentadapterservice.repository.OutboxRepository;
@@ -41,6 +42,12 @@ public class OutboxScheduler {
 
                 // simulate send (Kafka later)
                 // kafkaTemplate.send(...).get();
+
+//                new WalletCreditEvent(
+//                        event.getId(),
+//                        event.getUserId(),
+//                        event.getAmount()
+//                );
 
                 event.setStatus(OutboxStatus.PROCESSED);
 
