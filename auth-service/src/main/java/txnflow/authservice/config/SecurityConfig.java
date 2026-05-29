@@ -1,50 +1,48 @@
-package txnflow.gatewayservice.security;
+package txnflow.authservice.config;
 
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import txnflow.authservice.constant.RoleConstants;
 
-@Slf4j
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private static final String[] PUBLIC_ENDPOINTS = {
-            "/favicon.ico",
-            "/api/v1/auth/register",
-            "/api/v1/auth/login",
-            "/api/v1/auth/refresh",
-            "/api/v1/auth/logout",
-            "/api/v1/*/public/**",
-            "/api/v1/*/actuator/**",
-            "/error"
-    };
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   JwtAuthenticationConverter jwtAuthenticationConverter,
                                                    AuthenticationEntryPoint authenticationEntryPoint,
                                                    AccessDeniedHandler accessDeniedHandler
-    ) {
-        log.info("Configuring gateway security rules");
 
+    ) {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        .requestMatchers("/admin/**").hasRole(RoleConstants.ADMIN)
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(Customizer.withDefaults())
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
                         .authenticationEntryPoint(authenticationEntryPoint)
+
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)
@@ -53,14 +51,42 @@ public class SecurityConfig {
                 .build();
     }
 
+    private static final String[] PUBLIC_ENDPOINTS = {
+            "/register",
+            "/login",
+            "/refresh",
+            "/logout",
+            "/public/**",
+            "/error",
+            "/actuator/**"
+    };
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter scopesConverter = new JwtGrantedAuthoritiesConverter();
+
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            Collection<GrantedAuthority> authorities = new ArrayList<>(scopesConverter.convert(jwt));
+
+            Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+
+            if (realmAccess != null && realmAccess.get("roles") instanceof Collection<?> roles) {
+                roles.forEach(role -> authorities.add(
+                        new SimpleGrantedAuthority("ROLE_" + role)
+                ));
+            }
+
+            return authorities;
+        });
+
+        return converter;
+    }
+
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
-            log.warn("Unauthorized gateway request method={} path={}",
-                    request.getMethod(),
-                    sanitizedPath(request.getRequestURI())
-            );
-
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write("""
@@ -72,26 +98,11 @@ public class SecurityConfig {
     @Bean
     public AccessDeniedHandler accessDeniedHandler() {
         return (request, response, accessDeniedException) -> {
-            log.warn("Forbidden gateway request method={} path={}",
-                    request.getMethod(),
-                    sanitizedPath(request.getRequestURI())
-            );
-
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write("""
                     {"message":"Access denied"}
                     """);
         };
-    }
-
-    private String sanitizedPath(String path) {
-        if (path == null || path.isBlank()) {
-            return "/";
-        }
-
-        return path
-                .replaceAll("/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", "/{id}")
-                .replaceAll("/\\d+", "/{id}");
     }
 }

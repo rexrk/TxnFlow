@@ -1,6 +1,6 @@
 spring:
   application:
-    name: wallet-service
+    name: payment-adapter-service
   web:
     resources:
       add-mappings: false
@@ -12,7 +12,7 @@ spring:
           issuer-uri: ${KC_BASE_URL}/realms/txnflow
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/wallet_db
+    url: jdbc:postgresql://localhost:5432/payment_db
     username: txnflow
     password: txnflow_password
     hikari:
@@ -24,25 +24,24 @@ spring:
 
   kafka:
     bootstrap-servers: localhost:9092
-    consumer:
-      group-id: ${spring.application.name}
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
-      enable-auto-commit: true
-      properties:
-        spring.json.type.mapping: walletCreditEvent:txnflow.walletservice.kafka.event.WalletCreditEvent
-
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      properties:
+        spring.json.type.mapping: walletCreditEvent:txnflow.paymentadapterservice.dto.event.WalletCreditEvent
       acks: "1"
       retries: 3
 
+razorpay:
+  checkout-base-url: http://localhost:8081
+  key-id: ${RAZORPAY_KEY_ID}
+  key-secret: ${RAZORPAY_KEY_SECRET}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
+
 server:
-  port: 8083
+  port: 8084
   servlet:
-    context-path: /api/v1/wallets
+    context-path: /api/v1/payments
 
 logging:
   level:
@@ -63,7 +62,6 @@ management:
       export:
         otlp:
           endpoint: http://localhost:4318/v1/traces
-
   otlp:
     metrics:
       export:

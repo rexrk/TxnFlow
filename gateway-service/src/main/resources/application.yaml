@@ -26,6 +26,12 @@ spring:
               uri: http://localhost:8083
               predicates:
                 - Path=/api/v1/wallets/**
+
+            - id: payment-adapter-service
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/v1/payments/**
+
 server:
   port: 8081
 

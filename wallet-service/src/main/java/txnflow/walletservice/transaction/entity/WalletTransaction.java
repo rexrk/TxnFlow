@@ -16,7 +16,9 @@ import java.util.UUID;
         indexes = {
                 @Index(name = "idx_wallet_transaction_wallet_id", columnList = "wallet_id"),
                 @Index(name = "idx_wallet_transaction_transfer_id", columnList = "transfer_id"),
-                @Index(name = "idx_wallet_transaction_created_at", columnList = "created_at")
+                @Index(name = "idx_wallet_transaction_ledger_id", columnList = "ledger_id"),
+                @Index(name = "idx_wallet_transaction_created_at", columnList = "created_at"),
+                @Index(name = "idx_wallet_created_at", columnList = "wallet_id, created_at")
         }
 )
 @Getter
@@ -35,11 +37,14 @@ public class WalletTransaction {
     @Column(name = "transfer_id", updatable = false)
     private UUID transferId;  // Nullable - only set for transfer transactions
 
+    @Column(name = "ledger_id", updatable = false)
+    private UUID ledgerId;    // Nullable - only set for top-up transactions
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20, updatable = false)
     private TransactionType type;  // DEBIT, CREDIT
 
-    @Column(nullable = false, precision = 19, scale = 4, updatable = false)  // ✅ Changed to scale=4 for precision
+    @Column(nullable = false, precision = 19, scale = 4, updatable = false)
     private BigDecimal amount;
 
     @Column(name = "balance_after", nullable = false, precision = 19, scale = 4, updatable = false)
@@ -49,7 +54,7 @@ public class WalletTransaction {
     private String currency;
 
     @Column(length = 500, updatable = false)
-    private String description;  // ✅ Optional but useful
+    private String description;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
