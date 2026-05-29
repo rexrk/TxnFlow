@@ -22,6 +22,23 @@ spring:
       ddl-auto: update
     show-sql: false
 
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: ${spring.application.name}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+      enable-auto-commit: true
+      properties:
+        spring.json.type.mapping: walletCreditEvent:txnflow.walletservice.kafka.event.WalletCreditEvent
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      acks: "1"
+      retries: 3
+
 server:
   port: 8083
   servlet:
@@ -46,6 +63,7 @@ management:
       export:
         otlp:
           endpoint: http://localhost:4318/v1/traces
+
   otlp:
     metrics:
       export:

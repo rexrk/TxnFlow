@@ -1,4 +1,4 @@
-package txnflow.walletservice.wallet.dto.request;
+package txnflow.paymentadapterservice.dto.event;
 
 import java.util.UUID;
 

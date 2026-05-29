@@ -1,4 +1,4 @@
-package txnflow.paymentadapterservice.dto.response;
+package txnflow.walletservice.kafka.event;
 
 import java.util.UUID;
 

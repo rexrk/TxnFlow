@@ -11,16 +11,17 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface OutboxRepository extends JpaRepository<OutboxEvent, String> {
+public interface OutboxRepository extends JpaRepository<OutboxEvent, UUID> {
 
     @Query(value = """
-                SELECT * FROM outbox_event
-                WHERE status = 'PENDING'
+                SELECT id
+                FROM outbox_event
+                WHERE status = :status
                 ORDER BY created_at ASC
                 LIMIT :limit
                 FOR UPDATE SKIP LOCKED
             """, nativeQuery = true)
-    List<OutboxEvent> fetchPending(@Param("limit") int limit);
+    List<UUID> fetchPendingIds(@Param("status") String status, @Param("limit") int limit);
 
     boolean existsByLedgerIdAndEventType(UUID ledgerId, OutboxEventType eventType);
 }
