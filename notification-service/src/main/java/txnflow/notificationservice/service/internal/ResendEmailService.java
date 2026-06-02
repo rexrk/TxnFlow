@@ -2,6 +2,7 @@ package txnflow.notificationservice.service.internal;
 
 import com.resend.Resend;
 import com.resend.core.exception.ResendException;
+import com.resend.core.net.RequestOptions;
 import com.resend.services.emails.model.CreateEmailResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +60,9 @@ public class ResendEmailService implements EmailService {
             if (updated == 0) return;
 
             // 2. Send email (external call)
-            CreateEmailResponse providerResponse = resend.emails().send(request.email());
+            RequestOptions options = RequestOptions.builder()
+                    .setIdempotencyKey(request.eventId().toString()).build();
+            CreateEmailResponse providerResponse = resend.emails().send(request.email(), options);
 
             // 3. mark success
             entity.setStatus(NotificationStatus.SENT);
