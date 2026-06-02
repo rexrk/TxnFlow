@@ -28,7 +28,7 @@ public class TopupProcessor {
     private final WalletTransactionRepository walletTransactionRepository;
 
     @Transactional
-    @KafkaListener(topics = KafkaTopic.CREDIT_WALLET_ON_TOPUP)
+    @KafkaListener(topics = KafkaTopic.WALLET_CREDITED)
     public void processTopup(WalletCreditEvent event) {
 
         UUID userId = event.userId();

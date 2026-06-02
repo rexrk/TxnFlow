@@ -1,4 +1,4 @@
-package txnflow.walletservice.kafka.constant;
+package txnflow.paymentadapterservice.constant;
 
 public final class KafkaTopic {
     private KafkaTopic() {}
