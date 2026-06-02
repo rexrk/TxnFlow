@@ -4,8 +4,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+import txnflow.notificationservice.dto.event.UserRegisteredEvent;
+import txnflow.notificationservice.dto.request.NotificationRequest;
+import txnflow.notificationservice.enums.NotificationType;
 import txnflow.notificationservice.repository.NotificationRepository;
 import txnflow.notificationservice.service.EmailService;
+import txnflow.notificationservice.template.EmailTemplateFactory;
+
 import static txnflow.notificationservice.constant.KafkaTopic.*;
 
 @Service
@@ -13,14 +18,28 @@ import static txnflow.notificationservice.constant.KafkaTopic.*;
 @Slf4j
 public class NotificationListener {
 
+    private final EmailService emailService;
+    private final EmailTemplateFactory emailTemplateFactory;
+
     // =========================
     // USER SERVICE
     // =========================
 
-//    @KafkaListener(topics = USER_REGISTERED)
-//    public void onUserRegistered(UserRegisteredEvent event) {
-//    }
-//
+    @KafkaListener(topics = USER_REGISTERED)
+    public void onUserRegistered(UserRegisteredEvent event) {
+        emailService.send(
+                new NotificationRequest(
+                        event.eventId(),
+                        event.userId(),
+                        event.userId(),
+                        event.email(),
+                        NotificationType.WELCOME,
+                        emailTemplateFactory.userRegistered(event.email())
+                )
+        );
+
+    }
+
 //    @KafkaListener(topics = USER_VERIFIED)
 //    public void onUserVerified(UserVerifiedEvent event) {
 //    }

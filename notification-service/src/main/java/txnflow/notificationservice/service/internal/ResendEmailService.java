@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import txnflow.notificationservice.dto.request.NotificationRequest;
 import txnflow.notificationservice.entity.NotificationEvent;
 import txnflow.notificationservice.enums.NotificationStatus;
+import txnflow.notificationservice.exception.EmailDeliveryException;
 import txnflow.notificationservice.repository.NotificationRepository;
 import txnflow.notificationservice.service.EmailService;
 
@@ -26,7 +27,7 @@ public class ResendEmailService implements EmailService {
     private final Resend resend;
 
     @Override
-    public void send(NotificationRequest request) throws ResendException {
+    public void send(NotificationRequest request) {
 
         NotificationEvent entity;
 
@@ -71,15 +72,14 @@ public class ResendEmailService implements EmailService {
 
             repository.save(entity);
 
-        } catch (ResendException e) {
-            throw e;
+        } catch (ResendException ex) {
+            throw new EmailDeliveryException("EMAIL_SEND_FAILED", ex);
         }
         catch (DataIntegrityViolationException ex) {
             log.debug("Notification already claimed. eventId={}", request.eventId());
             return;
 
         } catch (Exception ex) {
-
             log.error("Notification failed eventId={}", request.eventId(), ex);
 
             boolean retryKafka = true;

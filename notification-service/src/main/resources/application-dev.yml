@@ -47,6 +47,7 @@ server:
 
 resend:
   api-key: ${RESEND_API_KEY}
+  email: noreply@mail.txnflow.dpdns.org
 
 logging:
   level:
