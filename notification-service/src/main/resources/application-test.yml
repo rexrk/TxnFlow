@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: notification-service-test
+
+  web:
+    resources:
+      add-mappings: false
+
+#  security:
+#    oauth2:
+#      resourceserver:
+#        jwt:
+#          issuer-uri: http://localhost:8080/realms/test
+#
+#  datasource:
+#    url: jdbc:tc:postgresql:16:///wallet_test_db?options=-c%20TimeZone=Asia/Kolkata
+#    username: txnflow
+#    password: txnflow_password
+#
+#  jpa:
+#    hibernate:
+#      ddl-auto: create-drop
+#    show-sql: false
+#    open-in-view: false
+
+server:
+  servlet:
+    context-path: /api/v1/notifications
+
+resend:
+  api-key: ${RESEND_API_KEY}
+
+management:
+  tracing:
+    export:
+      enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false

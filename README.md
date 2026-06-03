@@ -2,6 +2,12 @@
 
 TxnFlow — Payment Reliability Backend System
 
+External Systems:
+Cloudflare tunnel 
+```
+cloudflared tunnel run rexrk-tunnel
+```
+
 Goal:
 Build a backend-focused digital wallet/payment system demonstrating reliable transaction handling, idempotency, ledger architecture, webhook verification, async event processing, and Kubernetes deployment.
 
@@ -11,7 +17,7 @@ Build a backend-focused digital wallet/payment system demonstrating reliable tra
 
 Txn-Flow/
 ├── auth-service/                   # 1. JWT auth, users, roles
-├── wallet-core-service/            # 2. wallet, balance, transfer, ledger, idempotency
+├── wallet-service/            # 2. wallet, balance, transfer, ledger, idempotency
 ├── payment-adapter-service/        # 3. Razorpay integration + webhook verification
 ├── notification-service/           # 4. async transaction notifications
 ├── gateway-service/                # 5. routing, auth filter, rate limiting
@@ -26,10 +32,10 @@ Txn-Flow/
 
 ## Completion timeline
 - [x] auth-service
-- [ ] gateway-service
-- [ ] wallet-core-service
-- [ ] payment-adapter-service
-- [ ] Kafka
+- [x] gateway-service
+- [x] wallet-core-service
+- [x] payment-adapter-service
+- [x] Kafka
 - [ ] notification-service
 - [ ] config-service
 - [ ] discovery-service
@@ -72,14 +78,6 @@ Important validations:
 * Insufficient balance
 * Self-transfer prevention
 * Duplicate request prevention
-
-Suggested packages:
-wallet/
-transaction/
-ledger/
-idempotency/
-event/
-config/
 
 ---
 
@@ -169,74 +167,7 @@ Kubernetes:
 
 ---
 
-## IMPORTANT TABLES
 
-Wallet
-
-* id
-* userId
-* balance
-* currency
-* status
-* version
-* createdAt
-
-Transaction
-
-* id
-* fromWalletId
-* toWalletId
-* amount
-* status
-* idempotencyKey
-* createdAt
-
-LedgerEntry
-
-* id
-* transactionId
-* walletId
-* type (DEBIT/CREDIT)
-* amount
-* balanceAfter
-* createdAt
-
-IdempotencyRecord
-
-* id
-* idempotencyKey
-* userId
-* requestHash
-* status
-* createdAt
-
----
-
-## IMPORTANT FLOWS
-
-1. Wallet Transfer Flow
-
-* Validate sender balance
-* Lock wallet rows
-* Debit sender
-* Credit receiver
-* Create ledger entries
-* Commit transaction
-* Publish Kafka event
-
----
-
-2. Add Money Flow
-
-* Create Razorpay order
-* User completes payment
-* Razorpay webhook received
-* Verify webhook signature
-* Credit wallet
-* Create ledger entry
-* Publish Kafka event
-
----
 
 ## MUST-HAVE CONCEPTS
 
@@ -255,8 +186,6 @@ IdempotencyRecord
 
 ## SKIP FOR NOW
 
-Do NOT build initially:
-
 * CQRS
 * Saga orchestration engine
 * Multi-currency support
@@ -271,42 +200,3 @@ Do NOT build initially:
 * Advanced caching
 
 ---
-
-## BUILD ORDER
-
-1. auth-service
-2. wallet-core-service
-3. payment-adapter-service
-4. notification-service
-5. gateway-service
-6. config-service
-7. discovery-service
-8. Kubernetes deployment
-9. Documentation polish
-
----
-
-## PROJECT POSITIONING
-
-TxnFlow is NOT a banking CRUD app.
-
-It is a backend-focused payment reliability system demonstrating:
-
-* transaction consistency
-* concurrency handling
-* idempotent payment flows
-* immutable ledgering
-* webhook security
-* async event-driven architecture
-* microservices deployment using Kubernetes
-
-
-TxnFlow
-→ Digital wallet/payment backend
-→ Razorpay test integration
-→ Idempotent transaction handling
-→ Immutable ledger
-→ Webhook verification
-→ Async event-driven notifications
-→ Concurrency-safe balance updates
-```

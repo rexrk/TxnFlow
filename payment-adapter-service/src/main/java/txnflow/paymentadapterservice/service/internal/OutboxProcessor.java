@@ -6,7 +6,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import txnflow.paymentadapterservice.dto.event.WalletCreditEvent;
+import txnflow.paymentadapterservice.constant.KafkaTopic;
+import txnflow.paymentadapterservice.dto.event.TopupCompletedEvent;
+import txnflow.paymentadapterservice.dto.event.TopupFailedEvent;
 import txnflow.paymentadapterservice.entity.OutboxEvent;
 import txnflow.paymentadapterservice.enums.OutboxStatus;
 import txnflow.paymentadapterservice.repository.OutboxRepository;
@@ -21,7 +23,6 @@ public class OutboxProcessor {
     private final OutboxRepository outboxRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public static final String KAFKA_TOPIC = "wallet.credit.on-topup";
     private static final int MAX_RETRY = 5;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -38,13 +39,15 @@ public class OutboxProcessor {
         if (event.getStatus() == OutboxStatus.PROCESSED) return;
 
         try {
-            WalletCreditEvent walletCreditEvent = new WalletCreditEvent(
+            TopupCompletedEvent topupCompletedEvent = new TopupCompletedEvent(
+                    UUID.randomUUID(),
                     event.getLedgerId(),
                     event.getUserId(),
+                    event.getEmail(),
                     event.getAmount()
             );
 
-            kafkaTemplate.send(KAFKA_TOPIC, event.getUserId().toString(), walletCreditEvent).get();
+            kafkaTemplate.send(KafkaTopic.TOPUP_COMPLETED, event.getUserId().toString(), topupCompletedEvent);
 
             event.setStatus(OutboxStatus.PROCESSED);
             log.info("Successfully processed outbox event id={} ledgerId={}", event.getId(), event.getLedgerId());
@@ -53,6 +56,17 @@ public class OutboxProcessor {
             int retry = event.getRetryCount() + 1;
             event.setRetryCount(retry);
             event.setStatus(retry >= MAX_RETRY ? OutboxStatus.FAILED : OutboxStatus.PENDING);
+
+            if(retry >= MAX_RETRY) {
+                TopupFailedEvent topupFailedEvent = new TopupFailedEvent(
+                        UUID.randomUUID(),
+                        event.getLedgerId(),
+                        event.getUserId(),
+                        event.getEmail(),
+                        event.getAmount()
+                );
+                kafkaTemplate.send(KafkaTopic.TOPUP_FAILED, event.getUserId().toString(), topupFailedEvent);
+            }
 
             log.error("Failed processing outbox event id={} retry={}", event.getId(), retry, ex);
 

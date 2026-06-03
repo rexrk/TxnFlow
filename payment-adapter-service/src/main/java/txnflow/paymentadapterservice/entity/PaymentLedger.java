@@ -29,6 +29,9 @@ public class PaymentLedger {
     private String razorpayOrderId;
 
     @Column(nullable = false)
+    private String email;
+
+    @Column(nullable = false)
     private Long amount;
 
     @Column(nullable = false)
