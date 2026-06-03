@@ -33,9 +33,11 @@ public class DefaultPaymentService implements PaymentService {
     public CreateOrderResponse createOrder(CreateOrderRequest request) {
 
         UUID userId = userProvider.getCurrentAppUserId();
+        String email = userProvider.getCurrentUserEmail();
 
         PaymentLedger paymentLedger = PaymentLedger.builder()
                 .userId(userId)
+                .email(email)
                 .amount(request.amount())
                 .currency(RazorpayConstant.INR)
                 .status(PaymentStatus.CREATED)

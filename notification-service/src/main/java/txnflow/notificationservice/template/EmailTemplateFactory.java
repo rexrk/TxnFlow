@@ -31,4 +31,26 @@ public class EmailTemplateFactory {
         return build(email, subject, body);
 
     }
+
+    public CreateEmailOptions topupComplete(String email, Long amount) {
+        String subject = "Topup Complete";
+
+        String body = """
+            <h2>TxnFlow Topup</h2>
+            <p>Your wallet has been credited with ₹%s.</p>
+            """.formatted(amount);
+
+        return build(email, subject, body);
+    }
+
+    public CreateEmailOptions topupFailed(String email, Long amount) {
+        String subject = "Topup Complete";
+
+        String body = """
+            <h2>TxnFlow Topup</h2>
+            <p>Topup failed for amount ₹%s.</p>
+            """.formatted(amount);
+
+        return build(email, subject, body);
+    }
 }

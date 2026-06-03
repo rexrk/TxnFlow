@@ -32,7 +32,10 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
       enable-auto-commit: true
       properties:
-        spring.json.type.mapping: userRegisteredEvent:txnflow.notificationservice.dto.event.UserRegisteredEvent
+        spring.json.type.mapping: >-
+          userRegisteredEvent:txnflow.notificationservice.dto.event.UserRegisteredEvent,
+          topupFailedEvent:txnflow.notificationservice.dto.event.TopupFailedEvent,
+          topupCompletedEvent:txnflow.notificationservice.dto.event.TopupCompletedEvent
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

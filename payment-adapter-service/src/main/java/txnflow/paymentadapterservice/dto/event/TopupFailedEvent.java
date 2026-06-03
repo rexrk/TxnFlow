@@ -2,8 +2,10 @@ package txnflow.paymentadapterservice.dto.event;
 
 import java.util.UUID;
 
-public record WalletCreditEvent(
+public record TopupFailedEvent(
+        UUID eventId,
         UUID ledgerId,
         UUID userId,
+        String email,
         Long amount
 ) {}

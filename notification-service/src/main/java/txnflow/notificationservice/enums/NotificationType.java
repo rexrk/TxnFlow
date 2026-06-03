@@ -6,5 +6,6 @@ public enum NotificationType {
     PASSWORD_RESET,
     TRANSFER_SUCCESS,
     TRANSFER_RECEIVED,
-    TOPUP_SUCCESS
+    TOPUP_SUCCESS,
+    TOPUP_FAILED
 }

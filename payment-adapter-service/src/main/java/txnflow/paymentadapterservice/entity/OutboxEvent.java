@@ -44,6 +44,9 @@ public class OutboxEvent {
     @Column(nullable = false)
     private Long amount;
 
+    @Column
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

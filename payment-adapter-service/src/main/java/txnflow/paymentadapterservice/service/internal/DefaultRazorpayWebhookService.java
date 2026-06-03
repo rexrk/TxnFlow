@@ -93,6 +93,7 @@ public class DefaultRazorpayWebhookService implements RazorpayWebhookService {
         OutboxEvent event = OutboxEvent.builder()
                 .eventType(OutboxEventType.WALLET_CREDIT)
                 .userId(ledger.getUserId())
+                .email(ledger.getEmail())
                 .ledgerId(ledger.getId())
                 .amount(ledger.getAmount())
                 .status(OutboxStatus.PENDING)

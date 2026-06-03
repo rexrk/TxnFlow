@@ -31,7 +31,9 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
       enable-auto-commit: true
       properties:
-        spring.json.type.mapping: walletCreditEvent:txnflow.walletservice.kafka.event.WalletCreditEvent
+        spring.json.type.mapping: >-
+          topupCompletedEvent:txnflow.walletservice.kafka.event.TopupCompletedEvent,
+          userRegisteredEvent:txnflow.walletservice.kafka.event.UserRegisteredEvent
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

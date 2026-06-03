@@ -13,7 +13,7 @@ import txnflow.walletservice.transaction.entity.WalletTransaction;
 import txnflow.walletservice.transaction.enums.TransactionCategory;
 import txnflow.walletservice.transaction.enums.TransactionType;
 import txnflow.walletservice.transaction.repository.WalletTransactionRepository;
-import txnflow.walletservice.kafka.event.WalletCreditEvent;
+import txnflow.walletservice.kafka.event.TopupCompletedEvent;
 import txnflow.walletservice.wallet.entity.Wallet;
 import txnflow.walletservice.wallet.repository.WalletRepository;
 import java.math.BigDecimal;
@@ -28,8 +28,7 @@ public class TopupProcessor {
     private final WalletTransactionRepository walletTransactionRepository;
 
     @Transactional
-    @KafkaListener(topics = KafkaTopic.WALLET_CREDITED)
-    public void processTopup(WalletCreditEvent event) {
+    public void processTopup(TopupCompletedEvent event) {
 
         UUID userId = event.userId();
         UUID ledgerId = event.ledgerId();
