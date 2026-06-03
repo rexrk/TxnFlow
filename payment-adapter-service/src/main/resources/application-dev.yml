@@ -28,7 +28,8 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
       properties:
-        spring.json.type.mapping: walletCreditEvent:txnflow.paymentadapterservice.dto.event.WalletCreditEvent
+        spring.json.type.mapping: >-
+          walletCreditEvent:txnflow.paymentadapterservice.dto.event.WalletCreditEvent
       acks: "1"
       retries: 3
 

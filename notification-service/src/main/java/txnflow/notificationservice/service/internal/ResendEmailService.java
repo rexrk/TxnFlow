@@ -16,7 +16,6 @@ import txnflow.notificationservice.repository.NotificationRepository;
 import txnflow.notificationservice.service.EmailService;
 
 import java.time.Instant;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,103 +24,101 @@ public class ResendEmailService implements EmailService {
 
     private final NotificationRepository repository;
     private final Resend resend;
+    private static final int MAX_KAFKA_RETRIES = 5;
 
     @Override
     public void send(NotificationRequest request) {
-
-        NotificationEvent entity;
-
         try {
-            // 1. Fetch existing
-            Optional<NotificationEvent> existing = repository.findByEventId(request.eventId());
+            // 1. ENSURE ROW EXISTS (IDEMPOTENCY BASE)
+            NotificationEvent entity;
+            try {
+                entity = repository.findByEventId(request.eventId())
+                        .orElseGet(() -> repository.save(
+                                NotificationEvent.builder()
+                                        .eventId(request.eventId())
+                                        .userId(request.userId())
+                                        .recipient(request.recipient())
+                                        .referenceId(request.referenceId())
+                                        .notificationType(request.type())
+                                        .status(NotificationStatus.RECEIVED)
+                                        .retryCount(0)
+                                        .build()
+                        ));
 
-            // idempotency check
-            if (existing.isPresent()) {
-                entity = existing.get();
+            } catch (DataIntegrityViolationException e) {
+                entity = repository.findByEventId(request.eventId())
+                        .orElseThrow();
+            }
 
-                // already completed
-                if (entity.getStatus() == NotificationStatus.SENT) return;
+            // 2. DUPLICATE MESSAGE CHECK
+            if (entity.getStatus() == NotificationStatus.SENT ||
+                    entity.getStatus() == NotificationStatus.FAILED) {
+                return;
+            }
+
+            // 3. SEND EMAIL (EXTERNAL CALL)
+            CreateEmailResponse providerResponse = sendEmail(request);
+
+            // 4. UPDATE TO SENT
+            markSuccess(entity, providerResponse);
+
+            log.info("Email sent. eventId={}", request.eventId());
+
+        } catch (Exception e) {
+            NotificationEvent failedEntity = repository.findByEventId(request.eventId())
+                    .orElseThrow(() -> new IllegalStateException("Notification not found: " + request.eventId()));
+
+            int retryCount = failedEntity.getRetryCount() + 1;
+            failedEntity.setRetryCount(retryCount);
+
+            if (retryCount >= MAX_KAFKA_RETRIES) {
+                // Max retries reached: Mark FAILED for scheduler
+                markAsFailed(failedEntity, e);
+
+                log.warn("Max retries reached. Moved to scheduler. eventId={} retryCount={}",
+                        request.eventId(), retryCount);
 
             } else {
-                // create new
-                entity = NotificationEvent.builder()
-                        .eventId(request.eventId())
-                        .userId(request.userId())
-                        .recipient(request.recipient())
-                        .referenceId(request.referenceId())
-                        .notificationType(request.type())
-                        .status(NotificationStatus.RECEIVED)
-                        .retryCount(0)
-                        .build();
+                // Still retryable: Keep RECEIVED, throw to Kafka
+                failedEntity.setStatus(NotificationStatus.RECEIVED);
+                repository.save(failedEntity);
 
-                repository.save(entity);
+                log.info("Retryable error. eventId={} retryCount={}/{}",
+                        request.eventId(), retryCount, MAX_KAFKA_RETRIES);
+
+                throw new EmailDeliveryException("EMAIL_SEND_FAILED", e);
 
             }
-            int updated = repository.claimEvent(request.eventId());
-            if (updated == 0) return;
-
-            // 2. Send email (external call)
-            RequestOptions options = RequestOptions.builder()
-                    .setIdempotencyKey(request.eventId().toString()).build();
-            CreateEmailResponse providerResponse = resend.emails().send(request.email(), options);
-
-            // 3. mark success
-            entity.setStatus(NotificationStatus.SENT);
-            entity.setProviderResponseId(providerResponse.getId());
-            entity.setSentAt(Instant.now());
-
-            repository.save(entity);
-
-        } catch (ResendException ex) {
-            throw new EmailDeliveryException("EMAIL_SEND_FAILED", ex);
         }
-        catch (DataIntegrityViolationException ex) {
-            log.debug("Notification already claimed. eventId={}", request.eventId());
-            return;
 
-        } catch (Exception ex) {
-            log.error("Notification failed eventId={}", request.eventId(), ex);
+    }
 
-            boolean retryKafka = true;
+    private CreateEmailResponse sendEmail(NotificationRequest request) {
+        try {
+            RequestOptions options = RequestOptions.builder()
+                    .setIdempotencyKey(request.eventId().toString())
+                    .build();
 
-            try {
-                Optional<NotificationEvent> existing = repository.findByEventId(request.eventId());
+            return resend.emails().send(request.email(), options);
 
-                if (existing.isPresent()) {
+        } catch (ResendException e) {
+            throw new EmailDeliveryException("EMAIL_SEND_FAILED", e);
 
-                    entity = existing.get();
-
-                    int retryCount = entity.getRetryCount() + 1;
-
-                    entity.setRetryCount(retryCount);
-                    entity.setFailureReason(ex.getMessage());
-
-                    if (retryCount < 5) {
-                        entity.setStatus(NotificationStatus.RECEIVED);
-                        repository.save(entity);
-                    }
-                    else {
-                        entity.setStatus(NotificationStatus.FAILED);
-                        entity.setNextRetryAt(Instant.now().plusSeconds(60));
-                        repository.save(entity);
-
-                        log.error("Notification moved to scheduler retry. eventId={}, retryCount={}",
-                                request.eventId(),
-                                retryCount
-                        );
-
-                        retryKafka = false;
-                    }
-                }
-
-            } catch (Exception dbEx) {
-                log.error("DB update also failed eventId={}", request.eventId(), dbEx);
-                throw dbEx;
-            }
-
-            if (retryKafka) {
-                throw ex;
-            }
         }
     }
+
+    private void markAsFailed(NotificationEvent entity,  Exception e) {
+        entity.setStatus(NotificationStatus.FAILED);
+        entity.setFailureReason(e.getMessage());
+        entity.setNextRetryAt(Instant.now().plusSeconds(60));
+        repository.save(entity);
+    }
+
+    private void markSuccess(NotificationEvent entity, CreateEmailResponse response) {
+        entity.setStatus(NotificationStatus.SENT);
+        entity.setProviderResponseId(response.getId());
+        entity.setSentAt(Instant.now());
+        repository.save(entity);
+    }
+
 }

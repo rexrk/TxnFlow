@@ -10,6 +10,7 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -18,6 +19,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import txnflow.authservice.constant.JwtClaimConstants;
 import txnflow.authservice.constant.RoleConstants;
+import txnflow.authservice.dto.event.UserRegisteredEvent;
 import txnflow.authservice.dto.request.LoginRequest;
 import txnflow.authservice.dto.request.LogoutRequest;
 import txnflow.authservice.dto.request.RefreshTokenRequest;
@@ -35,6 +37,9 @@ import txnflow.authservice.service.AuthService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+
+import static txnflow.authservice.constant.KafkaTopic.USER_REGISTERED;
 
 @Slf4j
 @Service
@@ -45,6 +50,7 @@ public class KeycloakAuthService implements AuthService {
     private final KeycloakProperties props;
     private final RestClient restClient;
     private final AppUserRepository appUserRepository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     public void register(RegisterRequest request) {
@@ -85,8 +91,24 @@ public class KeycloakAuthService implements AuthService {
             );
 
             updateKeycloakAppUserId(keycloakUserId, appUser.getId().toString());
-
             assignUserRole(keycloakUserId);
+
+            UserRegisteredEvent userRegisteredEvent = new UserRegisteredEvent(
+                    UUID.randomUUID(),
+                    appUser.getId(),
+                    UUID.fromString(keycloakUserId),
+                    request.email()
+            );
+
+            kafkaTemplate.send(USER_REGISTERED, userRegisteredEvent.eventId().toString(), userRegisteredEvent)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("Failed to publish USER_REGISTERED event", ex);
+                        } else {
+                            log.info("Event published to topic {}", USER_REGISTERED);
+                        }
+                    });
+
             log.info("User registration completed. appUserId={}", appUser.getId());
 
         } catch (UserAlreadyExistsException ex) {

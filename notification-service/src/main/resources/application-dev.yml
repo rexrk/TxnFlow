@@ -12,17 +12,17 @@ spring:
 #        jwt:
 #          issuer-uri: ${KC_BASE_URL}/realms/txnflow
 
-#  datasource:
-#    url: jdbc:postgresql://localhost:5432/notification_db
-#    username: txnflow
-#    password: txnflow_password
-#    hikari:
-#      connection-timeout: 3000
-#  jpa:
-#    hibernate:
-#      ddl-auto: update
-#    show-sql: false
-#
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification_db
+    username: txnflow
+    password: txnflow_password
+    hikari:
+      connection-timeout: 3000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
@@ -32,7 +32,7 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
       enable-auto-commit: true
       properties:
-        spring.json.type.mapping: walletCreditEvent:txnflow.notificationservice.dto.event.WalletCreditEvent
+        spring.json.type.mapping: userRegisteredEvent:txnflow.notificationservice.dto.event.UserRegisteredEvent
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -47,7 +47,7 @@ server:
 
 resend:
   api-key: ${RESEND_API_KEY}
-  email: noreply@mail.txnflow.dpdns.org
+  email: event@mail.txnflow.dpdns.org
 
 logging:
   level:

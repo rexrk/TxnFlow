@@ -3,11 +3,11 @@ package txnflow.notificationservice.listener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import txnflow.notificationservice.dto.event.UserRegisteredEvent;
 import txnflow.notificationservice.dto.request.NotificationRequest;
 import txnflow.notificationservice.enums.NotificationType;
-import txnflow.notificationservice.repository.NotificationRepository;
 import txnflow.notificationservice.service.EmailService;
 import txnflow.notificationservice.template.EmailTemplateFactory;
 
@@ -26,12 +26,12 @@ public class NotificationListener {
     // =========================
 
     @KafkaListener(topics = USER_REGISTERED)
-    public void onUserRegistered(UserRegisteredEvent event) {
+    public void onUserRegistered(@Payload UserRegisteredEvent event) {
         emailService.send(
                 new NotificationRequest(
                         event.eventId(),
                         event.userId(),
-                        event.userId(),
+                        event.keycloakUserId(),
                         event.email(),
                         NotificationType.WELCOME,
                         emailTemplateFactory.userRegistered(event.email())

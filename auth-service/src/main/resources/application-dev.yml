@@ -22,6 +22,16 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      properties:
+        spring.json.type.mapping: userRegisteredEvent:txnflow.authservice.dto.event.UserRegisteredEvent
+      acks: "1"
+      retries: 3
+
 server:
   port: 8082
   servlet:

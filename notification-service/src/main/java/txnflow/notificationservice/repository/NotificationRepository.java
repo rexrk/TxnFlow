@@ -3,6 +3,8 @@ package txnflow.notificationservice.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import txnflow.notificationservice.entity.NotificationEvent;
 import txnflow.notificationservice.enums.NotificationStatus;
 import txnflow.notificationservice.enums.NotificationType;
@@ -17,15 +19,6 @@ public interface NotificationRepository extends JpaRepository<NotificationEvent,
     Optional<NotificationEvent> findByEventId(UUID eventId);
 
     List<NotificationEvent> findByUserId(UUID userId);
-
-    @Modifying
-    @Query("""
-         update NotificationEvent n
-         set n.status = 'PROCESSING'
-         where n.eventId = :eventId
-         and n.status = 'RECEIVED'
-    """)
-    int claimEvent(UUID eventId);
 
     Optional<NotificationEvent> findByNotificationTypeAndReferenceId(
             NotificationType notificationType,
