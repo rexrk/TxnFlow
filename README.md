@@ -1,202 +1,59 @@
-```md
+# TxnFlow — Reliable Payment & Wallet Backend
 
-TxnFlow — Payment Reliability Backend System
+Brief
 
-External Systems:
-Cloudflare tunnel 
-```
-cloudflared tunnel run rexrk-tunnel
-```
+TxnFlow is a modular microservices reference implementation showcasing reliable payment and wallet patterns: idempotent APIs, immutable ledger accounting, concurrency-safe transfers, webhook verification, and asynchronous event-driven processing. Built for learning, experimentation, and as a solid foundation for production systems.
 
-Goal:
-Build a backend-focused digital wallet/payment system demonstrating reliable transaction handling, idempotency, ledger architecture, webhook verification, async event processing, and Kubernetes deployment.
+Core capabilities
 
----
+- Idempotent request handling (Idempotency-Key support)
+- Immutable ledger entries + transactional safety (Postgres)
+- Concurrency controls (pessimistic locking where needed)
+- Payment adapter with webhook signature verification (Razorpay-ready)
+- Async eventing (Kafka) and notification consumer
+- JWT-based auth, gateway with Redis rate-limiting, and service discovery
+- Kubernetes manifests for deployment
 
-## PROJECT STRUCTURE
+Project structure
 
-Txn-Flow/
-├── auth-service/                   # 1. JWT auth, users, roles
-├── wallet-service/            # 2. wallet, balance, transfer, ledger, idempotency
-├── payment-adapter-service/        # 3. Razorpay integration + webhook verification
-├── notification-service/           # 4. async transaction notifications
-├── gateway-service/                # 5. routing, auth filter, rate limiting
-├── config-service/                 # 6. centralized config
-├── discovery-service/              # 7. service registry
-├── k8s/                            # 8. Kubernetes manifests
-├── docs/                           # 9. architecture, flows, failure cases
-├── README.md                       # 10. docs
-└── .gitignore
+- auth-service/               — JWT auth, users, roles, refresh tokens
+- wallet-service/             — wallets, balances, transfers, transactions, ledger, idempotency
+- payment-adapter-service/    — external payment gateway adapter, webhook handling
+- notification-service/       — Kafka consumer for email/SMS simulation and async notifications
+- gateway-service/            — API gateway, routing, auth filter, logging, rate limiting (Redis)
+- config-service/             — centralized configuration
+- discovery-service/          — service registry (Eureka-style)
+- k8s/                        — Kubernetes manifests and deployment examples
+- docs/                       — architecture diagrams, sequence flows, failure cases, design notes
+- README.md                   — this file
 
----
+Infrastructure
 
-## Completion timeline
-- [x] auth-service
-- [x] gateway-service
-- [x] wallet-core-service
-- [x] payment-adapter-service
-- [x] Kafka
-- [ ] notification-service
-- [ ] config-service
-- [ ] discovery-service
+- PostgreSQL: primary store for wallets, transactions, ledger, idempotency records
+- Redis: rate-limiting and optional caching
+- Kafka: event bus for async communication
+- Kubernetes: deployment and scaling
+- Optional: Cloudflare tunnel for local exposure during development
 
-## SERVICE RESPONSIBILITIES
+Quick start (overview)
 
-1. auth-service
+1. Start core infra (Postgres, Redis, Kafka) via docker-compose or k8s
+2. Configure environment variables using each service's README/sample.env
+3. Start auth-service and gateway-service first, then wallet and adapters
+4. Use Idempotency-Key header for safe retryable operations
+5. Deploy to a Kubernetes cluster using manifests in k8s/
 
-* User registration/login
-* JWT authentication
-* Refresh token flow
-* BCrypt password hashing
-* Basic RBAC (USER / ADMIN)
+Development & testing
 
----
+- Each service includes unit and integration tests; run per-service test scripts
+- Use docs/ for architecture decisions and failure-mode tests
 
-2. wallet-core-service
-   Main business service.
+Contributing
 
-Responsibilities:
+Open issues or PRs. For large changes, open an issue first to discuss design. See docs/architecture.md for rationale.
 
-* Wallet creation
-* Wallet balance management
-* Wallet-to-wallet transfer
-* Transaction history
-* Idempotency handling
-* Ledger entry creation
-* Transaction orchestration
+License
 
-Key concepts:
-
-* PostgreSQL transactions
-* Pessimistic locking
-* Idempotency keys
-* Immutable ledger entries
-* Concurrent transfer safety
-
-Important validations:
-
-* Insufficient balance
-* Self-transfer prevention
-* Duplicate request prevention
-
----
-
-3. payment-adapter-service
-   Handles external payment gateway integration.
-
-Responsibilities:
-
-* Razorpay test-mode order creation
-* Webhook signature verification
-* Payment status mapping
-* Payment event publishing
-
-Key concepts:
-
-* Adapter pattern
-* Webhook verification
-* External API isolation
-
----
-
-4. notification-service
-   Async event consumer.
-
-Responsibilities:
-
-* Consume Kafka events
-* Handle WalletCredited event
-* Handle TransferCompleted event
-* Simulate email/SMS notifications
-
-Key concepts:
-
-* Kafka consumer groups
-* Async processing
-
----
-
-5. gateway-service
-   Single entry point.
-
-Responsibilities:
-
-* Route requests
-* JWT validation filter
-* Redis-backed rate limiting
-* Request logging
-
----
-
-6. config-service
-   Centralized configuration management.
-
----
-
-7. discovery-service
-   Service registry using Eureka.
-
----
-
-## DATABASES & INFRA
-
-Primary DB:
-
-* PostgreSQL
-
-Use PostgreSQL for:
-
-* wallets
-* transactions
-* ledger entries
-* idempotency records
-* payment orders
-
-Redis:
-
-* rate limiting
-* optional idempotency cache
-
-Kafka:
-
-* async event communication
-
-Kubernetes:
-
-* Deploy all services using K8s manifests
-
----
-
-
-
-## MUST-HAVE CONCEPTS
-
-* JWT authentication
-* Refresh tokens
-* PostgreSQL transactions
-* Pessimistic locking
-* Immutable ledger
-* Idempotency keys
-* Kafka async events
-* Razorpay webhook verification
-* Redis rate limiting
-* Kubernetes deployment
-
----
-
-## SKIP FOR NOW
-
-* CQRS
-* Saga orchestration engine
-* Multi-currency support
-* Fraud detection
-* Complex KYC workflow
-* ELK stack
-* Prometheus/Grafana
-* DLQ
-* Service mesh
-* Multiple payment providers
-* OAuth2 login
-* Advanced caching
+Check LICENSE in the repo or contact the maintainer for licensing details.
 
 ---
