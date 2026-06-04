@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import txnflow.walletservice.constant.Currency;
 import txnflow.walletservice.exception.InsufficientBalanceException;
 import txnflow.walletservice.exception.InvalidTransferException;
@@ -38,6 +40,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test")
 class TransferProcessorTest {
 
+    @MockitoBean
+    private KafkaTemplate<String, Object> kafkaTemplate;
+
     @Autowired
     TransferProcessor transferProcessor;
 
@@ -53,7 +58,7 @@ class TransferProcessorTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private List<UUID> userIds;
+    private List<String> userIds;
 
     @BeforeEach
     void setUp() {
@@ -67,7 +72,8 @@ class TransferProcessorTest {
 
         for (int i = 1; i <= 3; i++) {
             walletRepository.save(Wallet.builder()
-                    .userId(createUserId())
+                    .userId(UUID.randomUUID())
+                    .email(createEmail(i))
                     .balance(BigDecimal.valueOf(1000L * i))
                     .currency(Currency.INR)
                     .status(WalletStatus.ACTIVE)
@@ -79,10 +85,10 @@ class TransferProcessorTest {
 
     }
 
-    private UUID createUserId() {
-        UUID userId = UUID.randomUUID();
-        this.userIds.add(userId);
-        return userId;
+    private String createEmail(int i) {
+        String email = "user%s@email.com".formatted(i);
+        this.userIds.add(email);
+        return email;
     }
 
     @Test
@@ -96,7 +102,7 @@ class TransferProcessorTest {
         );
 
         TransferMoneyResponse response = transferProcessor.processTransfer(
-            userIds.getFirst(),
+                userIds.getFirst(),
                 request,
                 "request-fingerprint-dummy-01"
         );
@@ -106,8 +112,8 @@ class TransferProcessorTest {
         assertThat(response.amount()).isEqualByComparingTo(new BigDecimal("100.0000"));
 
 
-        Wallet senderWallet = walletRepository.findByUserId(userIds.getFirst()).orElseThrow();
-        Wallet receiverWallet = walletRepository.findByUserId(userIds.get(1)).orElseThrow();
+        Wallet senderWallet = walletRepository.findByEmail(userIds.getFirst()).orElseThrow();
+        Wallet receiverWallet = walletRepository.findByEmail(userIds.get(1)).orElseThrow();
 
         assertThat(senderWallet.getBalance()).isEqualByComparingTo("900.0000");
         assertThat(receiverWallet.getBalance()).isEqualByComparingTo("2100.0000");
@@ -147,8 +153,8 @@ class TransferProcessorTest {
         ).isInstanceOf(InsufficientBalanceException.class)
                 .hasMessageStartingWith("Insufficient wallet balance");
 
-        Wallet senderWallet = walletRepository.findByUserId(userIds.getFirst()).orElseThrow();
-        Wallet receiverWallet = walletRepository.findByUserId(userIds.get(1)).orElseThrow();
+        Wallet senderWallet = walletRepository.findByEmail(userIds.getFirst()).orElseThrow();
+        Wallet receiverWallet = walletRepository.findByEmail(userIds.get(1)).orElseThrow();
 
         assertThat(senderWallet.getBalance()).isEqualByComparingTo("1000.0000");
         assertThat(receiverWallet.getBalance()).isEqualByComparingTo("2000.0000");
@@ -176,8 +182,8 @@ class TransferProcessorTest {
         ).isInstanceOf(InvalidTransferException.class)
                 .hasMessage("Invalid wallet PIN");
 
-        Wallet senderWallet = walletRepository.findByUserId(userIds.getFirst()).orElseThrow();
-        Wallet receiverWallet = walletRepository.findByUserId(userIds.get(1)).orElseThrow();
+        Wallet senderWallet = walletRepository.findByEmail(userIds.getFirst()).orElseThrow();
+        Wallet receiverWallet = walletRepository.findByEmail(userIds.get(1)).orElseThrow();
 
         assertThat(senderWallet.getBalance()).isEqualByComparingTo("1000.0000");
         assertThat(receiverWallet.getBalance()).isEqualByComparingTo("2000.0000");
@@ -189,10 +195,10 @@ class TransferProcessorTest {
     @Test
     void testProcessTransferFailsWhenReceiverWalletDoesNotExist() {
 
-        UUID missingReceiverId = UUID.randomUUID();
+        String email = "dummy-email";
 
         TransferMoneyRequest request = new TransferMoneyRequest(
-                missingReceiverId,
+                email,
                 new BigDecimal("100.0000"),
                 "test-key-missing-receiver-001",
                 "1234",
@@ -209,7 +215,7 @@ class TransferProcessorTest {
                 .hasMessage("Receiver wallet not found");
 
         Wallet senderWallet = walletRepository
-                .findByUserId(userIds.getFirst())
+                .findByEmail(userIds.getFirst())
                 .orElseThrow();
 
         assertThat(senderWallet.getBalance())
@@ -249,11 +255,11 @@ class TransferProcessorTest {
         ).isInstanceOf(DataIntegrityViolationException.class);
 
         Wallet senderWallet = walletRepository
-                .findByUserId(userIds.getFirst())
+                .findByEmail(userIds.getFirst())
                 .orElseThrow();
 
         Wallet receiverWallet = walletRepository
-                .findByUserId(userIds.get(1))
+                .findByEmail(userIds.get(1))
                 .orElseThrow();
 
         assertThat(senderWallet.getBalance())
@@ -272,7 +278,7 @@ class TransferProcessorTest {
     @Test
     void testProcessTransferFailsWhenSenderWalletIsNotActive() {
         Wallet senderWallet = walletRepository
-                .findByUserId(userIds.getFirst())
+                .findByEmail(userIds.getFirst())
                 .orElseThrow();
 
         senderWallet.setStatus(WalletStatus.FROZEN);
@@ -296,7 +302,7 @@ class TransferProcessorTest {
                 .hasMessage("Sender wallet is not active");
 
         Wallet receiverWallet = walletRepository
-                .findByUserId(userIds.get(1))
+                .findByEmail(userIds.get(1))
                 .orElseThrow();
 
         assertThat(senderWallet.getBalance()).isEqualByComparingTo("1000.0000");
@@ -309,7 +315,7 @@ class TransferProcessorTest {
     void testProcessTransferFailsWhenReceiverWalletIsNotActive() {
 
         Wallet receiverWallet = walletRepository
-                .findByUserId(userIds.get(1))
+                .findByEmail(userIds.get(1))
                 .orElseThrow();
 
         receiverWallet.setStatus(WalletStatus.FROZEN);
@@ -334,11 +340,11 @@ class TransferProcessorTest {
                 .hasMessage("Receiver wallet is not active");
 
         Wallet senderWallet = walletRepository
-                .findByUserId(userIds.getFirst())
+                .findByEmail(userIds.getFirst())
                 .orElseThrow();
 
         receiverWallet = walletRepository
-                .findByUserId(userIds.get(1))
+                .findByEmail(userIds.get(1))
                 .orElseThrow();
 
         assertThat(senderWallet.getBalance())
@@ -356,7 +362,7 @@ class TransferProcessorTest {
     void testProcessTransferFailsWhenWalletPinIsNotSet() {
 
         Wallet senderWallet = walletRepository
-                .findByUserId(userIds.getFirst())
+                .findByEmail(userIds.getFirst())
                 .orElseThrow();
 
         senderWallet.setPinSet(false);
@@ -382,11 +388,11 @@ class TransferProcessorTest {
                 .hasMessage("Wallet PIN is not set");
 
         Wallet receiverWallet = walletRepository
-                .findByUserId(userIds.get(1))
+                .findByEmail(userIds.get(1))
                 .orElseThrow();
 
         senderWallet = walletRepository
-                .findByUserId(userIds.getFirst())
+                .findByEmail(userIds.getFirst())
                 .orElseThrow();
 
         assertThat(senderWallet.getBalance())
@@ -459,11 +465,11 @@ class TransferProcessorTest {
         }
 
         Wallet senderWallet = walletRepository
-                .findByUserId(userIds.getFirst())
+                .findByEmail(userIds.getFirst())
                 .orElseThrow();
 
         Wallet receiverWallet = walletRepository
-                .findByUserId(userIds.get(1))
+                .findByEmail(userIds.get(1))
                 .orElseThrow();
 
         assertThat(senderWallet.getBalance())
@@ -482,10 +488,10 @@ class TransferProcessorTest {
     @Test
     void testConcurrentTransfersToSameReceiverShouldNotCorruptBalance() throws Exception {
 
-        UUID receiverUserId = userIds.get(2);
+        String receiverUserId = userIds.get(2);
         BigDecimal amount = new BigDecimal("100.0000");
 
-        List<UUID> senderIds = List.of(
+        List<String> senderIds = List.of(
                 userIds.get(0),
                 userIds.get(1)
         );
@@ -530,9 +536,9 @@ class TransferProcessorTest {
             }
         }
 
-        Wallet senderOne = walletRepository.findByUserId(userIds.get(0)).orElseThrow();
-        Wallet senderTwo = walletRepository.findByUserId(userIds.get(1)).orElseThrow();
-        Wallet receiver = walletRepository.findByUserId(receiverUserId).orElseThrow();
+        Wallet senderOne = walletRepository.findByEmail(userIds.get(0)).orElseThrow();
+        Wallet senderTwo = walletRepository.findByEmail(userIds.get(1)).orElseThrow();
+        Wallet receiver = walletRepository.findByEmail(receiverUserId).orElseThrow();
 
         assertThat(senderOne.getBalance()).isEqualByComparingTo("900.0000");
         assertThat(senderTwo.getBalance()).isEqualByComparingTo("1900.0000");

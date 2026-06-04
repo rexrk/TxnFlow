@@ -13,6 +13,8 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
 
     Optional<Wallet> findByUserId(UUID userId);
 
+    Optional<Wallet> findByEmail(String email);
+
     @Query("select w.id from Wallet w where w.userId = :userId")
     Optional<UUID> findWalletIdByUserId(UUID userId);
 
