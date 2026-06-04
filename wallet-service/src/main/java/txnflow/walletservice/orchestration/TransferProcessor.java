@@ -2,6 +2,7 @@ package txnflow.walletservice.orchestration;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +10,7 @@ import txnflow.walletservice.constant.Currency;
 import txnflow.walletservice.exception.InsufficientBalanceException;
 import txnflow.walletservice.exception.InvalidTransferException;
 import txnflow.walletservice.exception.WalletNotFoundException;
+import txnflow.walletservice.kafka.event.TransferCompletedEvent;
 import txnflow.walletservice.transaction.entity.WalletTransaction;
 import txnflow.walletservice.transaction.enums.TransactionCategory;
 import txnflow.walletservice.transaction.enums.TransactionType;
@@ -27,6 +29,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+import static txnflow.walletservice.kafka.constant.KafkaTopic.TOPUP_COMPLETED;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -37,25 +41,26 @@ public class TransferProcessor {
     private final WalletTransactionRepository walletTransactionRepository;
     private final PasswordEncoder passwordEncoder;
     private final TransferMapper transferMapper;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional
     public TransferMoneyResponse processTransfer(
-            UUID senderUserId,
+            String senderEmail,
             TransferMoneyRequest request,
             String requestFingerprint
     ) {
-        Wallet senderWallet = walletRepository.findByUserIdForUpdate(senderUserId)
+        Wallet senderWallet = walletRepository.findByEmailForUpdate(senderEmail)
                 .orElseThrow(() -> {
-                    log.warn("Transfer processing failed: sender wallet not found. senderUserId={}", senderUserId);
+                    log.warn("Transfer processing failed: sender wallet not found. senderEmail={}", senderEmail);
                     return new WalletNotFoundException("Sender wallet not found");
                 });
 
         verifyWalletPin(senderWallet, request.walletPin());
 
-        Wallet receiverWallet = walletRepository.findByUserIdForUpdate(request.receiverUserId())
+        Wallet receiverWallet = walletRepository.findByEmailForUpdate(request.receiverEmail())
                 .orElseThrow(() -> {
-                    log.warn("Transfer processing failed: receiver wallet not found. receiverUserId={}",
-                            request.receiverUserId());
+                    log.warn("Transfer processing failed: receiver wallet not found. receiverEmail={}",
+                            request.receiverEmail());
                     return new WalletNotFoundException("Receiver wallet not found");
                 });
 
@@ -101,7 +106,7 @@ public class TransferProcessor {
                         .balanceAfter(senderBalanceAfter)
                         .currency(Currency.INR)
                         .description(request.description())
-                        .counterpartyUserId(request.receiverUserId())
+                        .counterpartyUserId(receiverWallet.getId())
                         .category(TransactionCategory.PAID)
                         .build()
         );
@@ -115,7 +120,7 @@ public class TransferProcessor {
                         .balanceAfter(receiverBalanceAfter)
                         .currency(Currency.INR)
                         .description("Payment received")
-                        .counterpartyUserId(senderUserId)
+                        .counterpartyUserId(senderWallet.getId())
                         .category(TransactionCategory.RECEIVED)
                         .build()
         );
@@ -126,6 +131,19 @@ public class TransferProcessor {
         transfer.setCompletedAt(Instant.now());
 
         WalletTransfer completedTransfer = walletTransferRepository.saveAndFlush(transfer);
+
+        TransferCompletedEvent transferCompletedEvent =
+                new TransferCompletedEvent(
+                        UUID.randomUUID(),
+                        senderWallet.getId(),
+                        completedTransfer.getId(),
+                        senderEmail,
+                        request.amount().longValue(),
+                        request.receiverEmail()
+                );
+
+        kafkaTemplate.send(TOPUP_COMPLETED, senderWallet.getId().toString(), transferCompletedEvent);
+
         log.info("Transfer completed. transferId={} senderWalletId={} receiverWalletId={}",
                 completedTransfer.getId(),
                 senderWallet.getId(),

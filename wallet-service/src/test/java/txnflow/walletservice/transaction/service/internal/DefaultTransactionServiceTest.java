@@ -61,6 +61,7 @@ class DefaultTransactionServiceTest {
 
         wallet1 = walletRepository.save(Wallet.builder()
                 .userId(user1)
+                .email("user1@email.com")
                 .balance(BigDecimal.valueOf(1000))
                 .currency(Currency.INR)
                 .status(WalletStatus.ACTIVE)
@@ -70,6 +71,7 @@ class DefaultTransactionServiceTest {
 
         wallet2 = walletRepository.save(Wallet.builder()
                 .userId(user2)
+                .email("user2@email.com")
                 .balance(BigDecimal.valueOf(2000))
                 .currency(Currency.INR)
                 .status(WalletStatus.ACTIVE)

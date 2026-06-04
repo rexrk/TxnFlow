@@ -14,7 +14,8 @@ import java.util.UUID;
 @Table(
         name = "wallets",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_wallet_user_id", columnNames = "user_id")
+                @UniqueConstraint(name = "uk_wallet_user_id", columnNames = "user_id"),
+                @UniqueConstraint(name = "uk_wallet_user_email", columnNames = "email")
         }
 )
 @Getter
@@ -30,6 +31,9 @@ public class Wallet {
 
     @Column(name = "user_id", nullable = false, unique = true, updatable = false)
     private UUID userId;
+
+    @Column(name = "email", nullable = false, unique = true)
+    private String email;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal balance;

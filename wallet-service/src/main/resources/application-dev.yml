@@ -33,7 +33,8 @@ spring:
       properties:
         spring.json.type.mapping: >-
           topupCompletedEvent:txnflow.walletservice.kafka.event.TopupCompletedEvent,
-          userRegisteredEvent:txnflow.walletservice.kafka.event.UserRegisteredEvent
+          userRegisteredEvent:txnflow.walletservice.kafka.event.UserRegisteredEvent,
+          transferCompletedEvent:txnflow.walletservice.kafka.event.TransferCompletedEvent
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

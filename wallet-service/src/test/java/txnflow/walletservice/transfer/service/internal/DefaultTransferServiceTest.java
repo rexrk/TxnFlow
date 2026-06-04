@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -54,6 +55,11 @@ class DefaultTransferServiceTest {
 
     private List<UUID> userIds;
 
+    private List<String> userEmails;
+
+    @MockitoBean
+    private KafkaTemplate<String, Object> kafkaTemplate;
+
     @MockitoBean
     private CurrentUserProvider currentUserProvider;
 
@@ -66,10 +72,12 @@ class DefaultTransferServiceTest {
 
         // Initialize data
         userIds = new ArrayList<>();
+        userEmails = new ArrayList<>();
 
         for (int i = 1; i <= 3; i++) {
             walletRepository.save(Wallet.builder()
                     .userId(createUserId())
+                    .email(createEmail(i))
                     .balance(BigDecimal.valueOf(1000L * i))
                     .currency(Currency.INR)
                     .status(WalletStatus.ACTIVE)
@@ -79,6 +87,12 @@ class DefaultTransferServiceTest {
             );
         }
 
+    }
+
+    private String createEmail(int i) {
+        String email = "user%s@email.com".formatted(i);
+        this.userEmails.add(email);
+        return email;
     }
 
     private UUID createUserId() {
@@ -93,8 +107,11 @@ class DefaultTransferServiceTest {
         when(currentUserProvider.getCurrentAppUserId())
                 .thenReturn(userIds.getFirst());
 
+        when(currentUserProvider.getCurrentUserEmail())
+                .thenReturn(userEmails.getFirst());
+
         TransferMoneyRequest request = new TransferMoneyRequest(
-                userIds.getFirst(),
+                userEmails.getFirst(),
                 new BigDecimal("100.0000"),
                 "self-transfer-test",
                 "1234",
@@ -120,12 +137,16 @@ class DefaultTransferServiceTest {
     @Test
     void testSenderWalletNotFoundShouldFail() {
         UUID missingSenderUserId = UUID.randomUUID();
+        String missingEmail = "missing-email";
 
         when(currentUserProvider.getCurrentAppUserId())
                 .thenReturn(missingSenderUserId);
 
+        when(currentUserProvider.getCurrentUserEmail())
+                .thenReturn(missingEmail);
+
         TransferMoneyRequest request = new TransferMoneyRequest(
-                userIds.get(1),
+                userEmails.get(1),
                 new BigDecimal("100.0000"),
                 "sender-wallet-missing-test",
                 "1234",
@@ -147,6 +168,9 @@ class DefaultTransferServiceTest {
         when(currentUserProvider.getCurrentAppUserId())
                 .thenReturn(userIds.getFirst());
 
+        when(currentUserProvider.getCurrentUserEmail())
+                .thenReturn(userEmails.getFirst());
+
         int requestCount = 5;
         BigDecimal amount = new BigDecimal("100.0000");
         String sameIdempotencyKey = "same-key-concurrent-test";
@@ -161,7 +185,7 @@ class DefaultTransferServiceTest {
                         startLatch.await();
 
                         TransferMoneyRequest request = new TransferMoneyRequest(
-                                userIds.get(1),
+                                userEmails.get(1),
                                 amount,
                                 sameIdempotencyKey,
                                 "1234",
@@ -210,10 +234,13 @@ class DefaultTransferServiceTest {
         when(currentUserProvider.getCurrentAppUserId())
                 .thenReturn(userIds.getFirst());
 
+        when(currentUserProvider.getCurrentUserEmail())
+                .thenReturn(userEmails.getFirst());
+
         String sameKey = "same-key-different-payload-test";
 
         TransferMoneyRequest firstRequest = new TransferMoneyRequest(
-                userIds.get(1),
+                userEmails.get(1),
                 new BigDecimal("100.0000"),
                 sameKey,
                 "1234",
@@ -221,7 +248,7 @@ class DefaultTransferServiceTest {
         );
 
         TransferMoneyRequest secondRequest = new TransferMoneyRequest(
-                userIds.get(1),
+                userEmails.get(1),
                 new BigDecimal("200.0000"),
                 sameKey,
                 "1234",
@@ -256,10 +283,13 @@ class DefaultTransferServiceTest {
         when(currentUserProvider.getCurrentAppUserId())
                 .thenReturn(userIds.getFirst());
 
+        when(currentUserProvider.getCurrentUserEmail())
+                .thenReturn(userEmails.getFirst());
+
         String sameKey = "same-key-same-payload-test";
 
         TransferMoneyRequest request = new TransferMoneyRequest(
-                userIds.get(1),
+                userEmails.get(1),
                 new BigDecimal("100.0000"),
                 sameKey,
                 "1234",

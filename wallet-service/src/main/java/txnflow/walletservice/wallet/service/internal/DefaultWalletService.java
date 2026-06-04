@@ -33,17 +33,19 @@ public class DefaultWalletService implements WalletService {
     @Override
     public WalletResponse createWalletForCurrentUser() {
         UUID userId = currentUserProvider.getCurrentAppUserId();
-        return createWalletForUser(userId);
+        String email = currentUserProvider.getCurrentUserEmail();
+        return createWalletForUser(userId, email);
     }
 
     @Transactional
     @Override
-    public WalletResponse createWalletForUser(UUID userId) {
+    public WalletResponse createWalletForUser(UUID userId, String email) {
         return walletRepository.findByUserId(userId)
                 .map(walletMapper::toWalletResponse)
                 .orElseGet(() -> {
                     Wallet wallet = Wallet.builder()
                             .userId(userId)
+                            .email(email)
                             .balance(BigDecimal.ZERO)
                             .currency(Currency.INR)
                             .status(WalletStatus.ACTIVE)
