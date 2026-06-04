@@ -37,8 +37,9 @@ public class DefaultTransferService implements TransferService {
     @Override
     public TransferMoneyResponse transferMoney(TransferMoneyRequest request) {
         UUID senderUserId = currentUserProvider.getCurrentAppUserId();
+        String senderEmail = currentUserProvider.getCurrentUserEmail();
 
-        if (senderUserId.equals(request.receiverUserId())) {
+        if (senderEmail.equals(request.receiverEmail())) {
             log.warn("Transfer rejected: sender and receiver are same. userId={}", senderUserId);
             throw new InvalidTransferException("Cannot transfer money to yourself");
         }
@@ -63,10 +64,10 @@ public class DefaultTransferService implements TransferService {
             return transferMapper.toTransferMoneyResponse(existingTransfer.get(), true);
         }
 
-        log.info("Transfer requested. senderWalletId={} receiverUserId={}", senderWalletId, request.receiverUserId());
+        log.info("Transfer requested. senderWalletId={} receiverUserId={}", senderWalletId, request.receiverEmail());
 
         try {
-            return transferProcessor.processTransfer(senderUserId, request, requestFingerprint);
+            return transferProcessor.processTransfer(senderEmail, request, requestFingerprint);
 
         } catch (DataIntegrityViolationException ex ) {
             log.warn("Duplicate idempotency race detected. senderWalletId={}", senderWalletId);
@@ -86,7 +87,7 @@ public class DefaultTransferService implements TransferService {
     ) {
         try {
             String raw = senderUserId + "|" +
-                    request.receiverUserId() + "|" +
+                    request.receiverEmail() + "|" +
                     request.amount().stripTrailingZeros().toPlainString() + "|" +
                     Currency.INR;
 

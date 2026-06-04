@@ -7,6 +7,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import txnflow.notificationservice.dto.event.TopupCompletedEvent;
 import txnflow.notificationservice.dto.event.TopupFailedEvent;
+import txnflow.notificationservice.dto.event.TransferCompletedEvent;
 import txnflow.notificationservice.dto.event.UserRegisteredEvent;
 import txnflow.notificationservice.dto.request.NotificationRequest;
 import txnflow.notificationservice.enums.NotificationType;
@@ -78,7 +79,7 @@ public class NotificationListener {
                         event.ledgerId(),
                         event.email(),
                         NotificationType.TOPUP_SUCCESS,
-                        emailTemplateFactory.topupComplete(event.email(), event.amount())
+                        emailTemplateFactory.topupCompleted(event.email(), event.amount())
                 )
         );
     }
@@ -102,9 +103,19 @@ public class NotificationListener {
     // TRANSFER SERVICE
     // =========================
 
-//    @KafkaListener(topics = TRANSFER_COMPLETED)
-//    public void onTransferCompleted(TransferCompletedEvent event) {
-//    }
+    @KafkaListener(topics = TRANSFER_COMPLETED)
+    public void onTransferCompleted(TransferCompletedEvent event) {
+        emailService.send(
+                new NotificationRequest(
+                        event.eventId(),
+                        event.userId(),
+                        event.transferId(),
+                        event.email(),
+                        NotificationType.TRANSFER_SUCCESS,
+                        emailTemplateFactory.transferCompleted(event.email(), event.amount(), event.receiverEmail())
+                )
+        );
+    }
 //
 //    @KafkaListener(topics = TRANSFER_FAILED)
 //    public void onTransferFailed(TransferFailedEvent event) {

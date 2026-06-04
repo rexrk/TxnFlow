@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
-import txnflow.walletservice.kafka.constant.KafkaTopic;
 import txnflow.walletservice.kafka.event.TopupCompletedEvent;
 import txnflow.walletservice.kafka.event.UserRegisteredEvent;
 import txnflow.walletservice.orchestration.TopupProcessor;
@@ -16,14 +15,14 @@ import static txnflow.walletservice.kafka.constant.KafkaTopic.USER_REGISTERED;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class WalletEventListener {
+public class EventListener {
 
     private final WalletService walletService;
     private final TopupProcessor topupProcessor;
 
     @KafkaListener(topics = USER_REGISTERED)
     public void onUserRegistered(UserRegisteredEvent event) {
-        walletService.createWalletForUser(event.userId());
+        walletService.createWalletForUser(event.userId(), event.email());
 
         log.info("Wallet creation processed. userId={}", event.userId());
 

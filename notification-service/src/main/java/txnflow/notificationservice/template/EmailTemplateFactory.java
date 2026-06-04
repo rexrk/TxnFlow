@@ -32,7 +32,7 @@ public class EmailTemplateFactory {
 
     }
 
-    public CreateEmailOptions topupComplete(String email, Long amount) {
+    public CreateEmailOptions topupCompleted(String email, Long amount) {
         String subject = "Topup Complete";
 
         String body = """
@@ -50,6 +50,17 @@ public class EmailTemplateFactory {
             <h2>TxnFlow Topup</h2>
             <p>Topup failed for amount ₹%s.</p>
             """.formatted(amount);
+
+        return build(email, subject, body);
+    }
+
+    public CreateEmailOptions transferCompleted(String email, Long amount, String receiverEmail) {
+        String subject = "Transfer Complete";
+
+        String body = """
+            <h2>TxnFlow Transfer</h2>
+            <p>Transfer successful to %s, for amount ₹%s.</p>
+            """.formatted(receiverEmail, amount);
 
         return build(email, subject, body);
     }

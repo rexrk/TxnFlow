@@ -9,7 +9,7 @@ public interface WalletService {
 
     WalletResponse createWalletForCurrentUser();
 
-    WalletResponse createWalletForUser(UUID userId);
+    WalletResponse createWalletForUser(UUID userId, String email);
 
     WalletResponse getMyWallet();
 

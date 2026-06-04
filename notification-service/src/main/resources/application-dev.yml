@@ -35,8 +35,8 @@ spring:
         spring.json.type.mapping: >-
           userRegisteredEvent:txnflow.notificationservice.dto.event.UserRegisteredEvent,
           topupFailedEvent:txnflow.notificationservice.dto.event.TopupFailedEvent,
-          topupCompletedEvent:txnflow.notificationservice.dto.event.TopupCompletedEvent
-
+          topupCompletedEvent:txnflow.notificationservice.dto.event.TopupCompletedEvent,
+          transferCompletedEvent:txnflow.notificationservice.dto.event.TransferCompletedEvent
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
